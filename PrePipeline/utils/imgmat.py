@@ -40,36 +40,15 @@ class FigureOutRectangeMasker(BaseImageMatrixProcesser):
         super().__init__(input_img=input_img, output_path=output_path)
     
     def _detect_center_area(self, img: np.ndarray):
-        '''检测整个图像的中心区域'''
+        '''返回高度和原图片相同，占中心1/3-2/3区域的中心矩形框区域'''
         height, width = img.shape[:2]
-        center_x, center_y = width // 2, height // 2
-        bbox_size = min(width, height) // 2
-        x = max(0, center_x - bbox_size // 2)
-        y = max(0, center_y - bbox_size // 2)
-        return int(x), int(y), int(bbox_size), int(bbox_size)
-    
-    def _detect_with_Canny(self, img: np.ndarray):
-        '''通过轮廓分析检测人物框'''
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        blurred = cv2.GaussianBlur(gray, (5, 5), 0)
-        edges = cv2.Canny(blurred, 50, 150)
-        
-        contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        
-        if contours:
-            largest_contour = max(contours, key=cv2.contourArea) # 选择面积最大的轮廓
-            x, y, w, h = cv2.boundingRect(largest_contour)
-            
-            # 扩展边界框，确保包含整个人物
-            padding_x = int(w * 0.1)
-            padding_y = int(h * 0.1)
-            x = max(0, x - padding_x)
-            y = max(0, y - padding_y)
-            w = min(img.shape[1] - x, w + 2 * padding_x)
-            h = min(img.shape[0] - y, h + 2 * padding_y)
-            return int(x), int(y), int(w), int(h)
-        else:
-            return None
+        x1 = width // 3
+        x2 = (2 * width) // 3
+        x = int(x1)
+        y = 0
+        w = int(x2 - x1)
+        h = int(height)
+        return x, y, w, h
     
     def _detect_with_HOG(self, img: np.ndarray):
         '''使用OpenCV的人体检测器检测人物边界框'''
@@ -95,12 +74,9 @@ class FigureOutRectangeMasker(BaseImageMatrixProcesser):
 
     def _detect_main_figure(self, img: np.ndarray):
         '''检测图像中的主要人物，返回边界框 (x, y, w, h)'''
-        res = self._detect_with_HOG(img)
-        if res is not None:
-            return res
-        res = self._detect_with_Canny(img)
-        if res is not None:
-            return res
+        # res = self._detect_with_HOG(img)
+        # if res is not None:
+        #     return res
         return self._detect_center_area(img)
     
     def _create_masked_image(self, img: np.ndarray, bbox: tuple[int, int, int, int]):

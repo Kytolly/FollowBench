@@ -1,11 +1,11 @@
 import numpy as np
 import cv2
-from imgmat import FigureExtractor, FigureOutRectangeMasker, BaseImageMatrixProcesser
+from utils.imgmat import FigureExtractor, FigureOutRectangeMasker, BaseImageMatrixProcesser
 
 IMP_DICT = {
-    'FE': FigureExtractor,
-    'FORM': FigureOutRectangeMasker,
-}            
+    'FigE': FigureExtractor,
+    'FigORM': FigureOutRectangeMasker,
+}
 class ReferenceImageExtractor():
     def __init__(self, input_video_path, output_path):
         self.input_video_path = input_video_path
@@ -56,7 +56,7 @@ class ReferenceImageExtractor():
         _, frame = self.cap.read()
         return frame_idx, frame
     
-    def run(self, idx=None, time_sec=None, seed=None, mode='FORM'):
+    def run(self, idx=None, time_sec=None, seed=None, mode='FigE'):
         '''抽取并保存一张帧, 提取人物轮廓'''
         frame_idx, frame = self.get_frame_matrix(idx=idx, time_sec=time_sec, seed=seed)
         imp :BaseImageMatrixProcesser= IMP_DICT[mode](input_img=frame, output_path=self.output_path)
