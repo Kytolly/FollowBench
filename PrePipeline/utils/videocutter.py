@@ -46,7 +46,7 @@ class VideoCutter():
         frames_to_write = end_frame - start_frame
 
         self.cap.set(cv2.CAP_PROP_POS_FRAMES, start_frame)
-        output_filename = f'{self.base_name}-slice-{idx:03d}.mp4'
+        output_filename = f'{self.base_name}_part_{idx+1:03d}.mp4'
         output_path = os.path.join(self.output_dir, output_filename)
         
         out = cv2.VideoWriter(output_path, self.fourcc, self.get_fps(), self.get_resolution())

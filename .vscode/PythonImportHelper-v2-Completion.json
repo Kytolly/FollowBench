@@ -1,0 +1,377 @@
+[
+    {
+        "label": "numpy",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "numpy",
+        "description": "numpy",
+        "detail": "numpy",
+        "documentation": {}
+    },
+    {
+        "label": "rembg",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "rembg",
+        "description": "rembg",
+        "detail": "rembg",
+        "documentation": {}
+    },
+    {
+        "label": "cv2",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "cv2",
+        "description": "cv2",
+        "detail": "cv2",
+        "documentation": {}
+    },
+    {
+        "label": "FigureExtractor",
+        "importPath": "utils.imgmat",
+        "description": "utils.imgmat",
+        "isExtraImport": true,
+        "detail": "utils.imgmat",
+        "documentation": {}
+    },
+    {
+        "label": "FigureOutRectangeMasker",
+        "importPath": "utils.imgmat",
+        "description": "utils.imgmat",
+        "isExtraImport": true,
+        "detail": "utils.imgmat",
+        "documentation": {}
+    },
+    {
+        "label": "BaseImageMatrixProcesser",
+        "importPath": "utils.imgmat",
+        "description": "utils.imgmat",
+        "isExtraImport": true,
+        "detail": "utils.imgmat",
+        "documentation": {}
+    },
+    {
+        "label": "BaseImageMatrixProcesser",
+        "importPath": "utils.imgmat",
+        "description": "utils.imgmat",
+        "isExtraImport": true,
+        "detail": "utils.imgmat",
+        "documentation": {}
+    },
+    {
+        "label": "FigureExtractor",
+        "importPath": "utils.imgmat",
+        "description": "utils.imgmat",
+        "isExtraImport": true,
+        "detail": "utils.imgmat",
+        "documentation": {}
+    },
+    {
+        "label": "FigureOutRectangeMasker",
+        "importPath": "utils.imgmat",
+        "description": "utils.imgmat",
+        "isExtraImport": true,
+        "detail": "utils.imgmat",
+        "documentation": {}
+    },
+    {
+        "label": "os",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "os",
+        "description": "os",
+        "detail": "os",
+        "documentation": {}
+    },
+    {
+        "label": "ReferenceImageExtractor",
+        "importPath": "utils.rie",
+        "description": "utils.rie",
+        "isExtraImport": true,
+        "detail": "utils.rie",
+        "documentation": {}
+    },
+    {
+        "label": "VideoCutter",
+        "importPath": "utils.videocutter",
+        "description": "utils.videocutter",
+        "isExtraImport": true,
+        "detail": "utils.videocutter",
+        "documentation": {}
+    },
+    {
+        "label": "threading",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "threading",
+        "description": "threading",
+        "detail": "threading",
+        "documentation": {}
+    },
+    {
+        "label": "torch",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "torch",
+        "description": "torch",
+        "detail": "torch",
+        "documentation": {}
+    },
+    {
+        "label": "transforms",
+        "importPath": "torchvision",
+        "description": "torchvision",
+        "isExtraImport": true,
+        "detail": "torchvision",
+        "documentation": {}
+    },
+    {
+        "label": "Image",
+        "importPath": "PIL",
+        "description": "PIL",
+        "isExtraImport": true,
+        "detail": "PIL",
+        "documentation": {}
+    },
+    {
+        "label": "VideoReader",
+        "importPath": "decord",
+        "description": "decord",
+        "isExtraImport": true,
+        "detail": "decord",
+        "documentation": {}
+    },
+    {
+        "label": "InterpolationMode",
+        "importPath": "torchvision.transforms",
+        "description": "torchvision.transforms",
+        "isExtraImport": true,
+        "detail": "torchvision.transforms",
+        "documentation": {}
+    },
+    {
+        "label": "random",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "random",
+        "description": "random",
+        "detail": "random",
+        "documentation": {}
+    },
+    {
+        "label": "BaseImageMatrixProcesser",
+        "kind": 6,
+        "importPath": "PrePipeline.utils.imgmat",
+        "description": "PrePipeline.utils.imgmat",
+        "peekOfCode": "class BaseImageMatrixProcesser():\n    def __init__(self, input_img: np.ndarray, output_path :str):\n        self.input_img = input_img # 图片矩阵\n        self.output_path = output_path # 保存路径\n    def run(self):\n        pass\nclass FigureExtractor(BaseImageMatrixProcesser):\n    def __init__(self, input_img: np.ndarray, output_path :str, model: str='u2net_human_seg'):\n        super().__init__(input_img=input_img, output_path=output_path)\n        self.model = model # 使用的 rembg 模型 ",
+        "detail": "PrePipeline.utils.imgmat",
+        "documentation": {}
+    },
+    {
+        "label": "FigureExtractor",
+        "kind": 6,
+        "importPath": "PrePipeline.utils.imgmat",
+        "description": "PrePipeline.utils.imgmat",
+        "peekOfCode": "class FigureExtractor(BaseImageMatrixProcesser):\n    def __init__(self, input_img: np.ndarray, output_path :str, model: str='u2net_human_seg'):\n        super().__init__(input_img=input_img, output_path=output_path)\n        self.model = model # 使用的 rembg 模型 \n        # 备选项有['u2net', 'u2netp', 'u2net_human_seg', \n        # 'u2net_cloth_seg', 'silueta', 'isnet-general-use', \n        # 'isnet-general-use', 'isnet-anime']\n    def process_input(self):\n        '''将 self.input_img 编码为 png 格式'''\n        ret, buffer = cv2.imencode('.png', self.input_img)",
+        "detail": "PrePipeline.utils.imgmat",
+        "documentation": {}
+    },
+    {
+        "label": "FigureOutRectangeMasker",
+        "kind": 6,
+        "importPath": "PrePipeline.utils.imgmat",
+        "description": "PrePipeline.utils.imgmat",
+        "peekOfCode": "class FigureOutRectangeMasker(BaseImageMatrixProcesser):\n    def __init__(self, input_img: np.ndarray, output_path: str):\n        super().__init__(input_img=input_img, output_path=output_path)\n    def _detect_center_area(self, img: np.ndarray):\n        '''返回高度和原图片相同，占中心1/3-2/3区域的中心矩形框区域'''\n        height, width = img.shape[:2]\n        x1 = width // 3\n        x2 = (2 * width) // 3\n        x = int(x1)\n        y = 0",
+        "detail": "PrePipeline.utils.imgmat",
+        "documentation": {}
+    },
+    {
+        "label": "ReferenceImageExtractor",
+        "kind": 6,
+        "importPath": "PrePipeline.utils.rie",
+        "description": "PrePipeline.utils.rie",
+        "peekOfCode": "class ReferenceImageExtractor():\n    def __init__(self, input_video_path, output_path):\n        self.input_video_path = input_video_path\n        self.cap = cv2.VideoCapture(self.input_video_path)\n        if not self.cap.isOpened():\n            raise Exception(f\"fail to open video file: {self.input_video_path}\")\n        self.output_path = output_path\n    def get_total_frames(self):\n        '''获取输入视频的总帧数'''\n        return int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT))",
+        "detail": "PrePipeline.utils.rie",
+        "documentation": {}
+    },
+    {
+        "label": "IMP_DICT",
+        "kind": 5,
+        "importPath": "PrePipeline.utils.rie",
+        "description": "PrePipeline.utils.rie",
+        "peekOfCode": "IMP_DICT = {\n    'FigE': FigureExtractor,\n    'FigORM': FigureOutRectangeMasker,\n}\nclass ReferenceImageExtractor():\n    def __init__(self, input_video_path, output_path):\n        self.input_video_path = input_video_path\n        self.cap = cv2.VideoCapture(self.input_video_path)\n        if not self.cap.isOpened():\n            raise Exception(f\"fail to open video file: {self.input_video_path}\")",
+        "detail": "PrePipeline.utils.rie",
+        "documentation": {}
+    },
+    {
+        "label": "VideoCutter",
+        "kind": 6,
+        "importPath": "PrePipeline.utils.videocutter",
+        "description": "PrePipeline.utils.videocutter",
+        "peekOfCode": "class VideoCutter():\n    def __init__(self, input_video_path, output_dir, base_name, frames_per_slice=300):\n        self.cap = cv2.VideoCapture(input_video_path)\n        self.std_frames_per_slice = frames_per_slice\n        self.fourcc = cv2.VideoWriter_fourcc(*'mp4v')\n        self.base_name = base_name\n        self.output_dir = output_dir\n        if not self.cap.isOpened():\n            raise Exception(f'fail to open video file: {input_video_path}.')\n        if not os.path.exists(output_dir):",
+        "detail": "PrePipeline.utils.videocutter",
+        "documentation": {}
+    },
+    {
+        "label": "fpvs_path",
+        "kind": 5,
+        "importPath": "PrePipeline.pipeline",
+        "description": "PrePipeline.pipeline",
+        "peekOfCode": "fpvs_path = [f'/opt/liblibai-models/user-workspace2/dataset/ego/new/{i}/fpv.mp4' for i in range(32)]\ntpvs_path = [f'/opt/liblibai-models/user-workspace2/dataset/ego/new/{i}/tpv.mp4' for i in range(32)]\ndes_fpv_slices_path = '/opt/liblibai-models/user-workspace2/dataset/ego/First_Video'\ndes_tpv_slices_path = '/opt/liblibai-models/user-workspace2/dataset/ego/Third_Video'\ndes_ref_images_path = '/opt/liblibai-models/user-workspace2/dataset/ego/Reference_Image'\nfpv_workers = [\n            VideoCutter(\n                input_video_path=fpvs_path[i], \n                output_dir=des_fpv_slices_path, \n                base_name=f'{i+1}-1', ",
+        "detail": "PrePipeline.pipeline",
+        "documentation": {}
+    },
+    {
+        "label": "tpvs_path",
+        "kind": 5,
+        "importPath": "PrePipeline.pipeline",
+        "description": "PrePipeline.pipeline",
+        "peekOfCode": "tpvs_path = [f'/opt/liblibai-models/user-workspace2/dataset/ego/new/{i}/tpv.mp4' for i in range(32)]\ndes_fpv_slices_path = '/opt/liblibai-models/user-workspace2/dataset/ego/First_Video'\ndes_tpv_slices_path = '/opt/liblibai-models/user-workspace2/dataset/ego/Third_Video'\ndes_ref_images_path = '/opt/liblibai-models/user-workspace2/dataset/ego/Reference_Image'\nfpv_workers = [\n            VideoCutter(\n                input_video_path=fpvs_path[i], \n                output_dir=des_fpv_slices_path, \n                base_name=f'{i+1}-1', \n                frames_per_slice=300",
+        "detail": "PrePipeline.pipeline",
+        "documentation": {}
+    },
+    {
+        "label": "des_fpv_slices_path",
+        "kind": 5,
+        "importPath": "PrePipeline.pipeline",
+        "description": "PrePipeline.pipeline",
+        "peekOfCode": "des_fpv_slices_path = '/opt/liblibai-models/user-workspace2/dataset/ego/First_Video'\ndes_tpv_slices_path = '/opt/liblibai-models/user-workspace2/dataset/ego/Third_Video'\ndes_ref_images_path = '/opt/liblibai-models/user-workspace2/dataset/ego/Reference_Image'\nfpv_workers = [\n            VideoCutter(\n                input_video_path=fpvs_path[i], \n                output_dir=des_fpv_slices_path, \n                base_name=f'{i+1}-1', \n                frames_per_slice=300\n            )",
+        "detail": "PrePipeline.pipeline",
+        "documentation": {}
+    },
+    {
+        "label": "des_tpv_slices_path",
+        "kind": 5,
+        "importPath": "PrePipeline.pipeline",
+        "description": "PrePipeline.pipeline",
+        "peekOfCode": "des_tpv_slices_path = '/opt/liblibai-models/user-workspace2/dataset/ego/Third_Video'\ndes_ref_images_path = '/opt/liblibai-models/user-workspace2/dataset/ego/Reference_Image'\nfpv_workers = [\n            VideoCutter(\n                input_video_path=fpvs_path[i], \n                output_dir=des_fpv_slices_path, \n                base_name=f'{i+1}-1', \n                frames_per_slice=300\n            )\n            for i in range(32)",
+        "detail": "PrePipeline.pipeline",
+        "documentation": {}
+    },
+    {
+        "label": "des_ref_images_path",
+        "kind": 5,
+        "importPath": "PrePipeline.pipeline",
+        "description": "PrePipeline.pipeline",
+        "peekOfCode": "des_ref_images_path = '/opt/liblibai-models/user-workspace2/dataset/ego/Reference_Image'\nfpv_workers = [\n            VideoCutter(\n                input_video_path=fpvs_path[i], \n                output_dir=des_fpv_slices_path, \n                base_name=f'{i+1}-1', \n                frames_per_slice=300\n            )\n            for i in range(32)\n            ]",
+        "detail": "PrePipeline.pipeline",
+        "documentation": {}
+    },
+    {
+        "label": "fpv_workers",
+        "kind": 5,
+        "importPath": "PrePipeline.pipeline",
+        "description": "PrePipeline.pipeline",
+        "peekOfCode": "fpv_workers = [\n            VideoCutter(\n                input_video_path=fpvs_path[i], \n                output_dir=des_fpv_slices_path, \n                base_name=f'{i+1}-1', \n                frames_per_slice=300\n            )\n            for i in range(32)\n            ]\ntpv_workers = [",
+        "detail": "PrePipeline.pipeline",
+        "documentation": {}
+    },
+    {
+        "label": "tpv_workers",
+        "kind": 5,
+        "importPath": "PrePipeline.pipeline",
+        "description": "PrePipeline.pipeline",
+        "peekOfCode": "tpv_workers = [\n            VideoCutter(\n                input_video_path=tpvs_path[i], \n                output_dir=des_tpv_slices_path, \n                base_name=f'{i+1}-3', \n                frames_per_slice=300\n            )\n            for i in range(32)\n            ]\nworkers = fpv_workers + tpv_workers",
+        "detail": "PrePipeline.pipeline",
+        "documentation": {}
+    },
+    {
+        "label": "workers",
+        "kind": 5,
+        "importPath": "PrePipeline.pipeline",
+        "description": "PrePipeline.pipeline",
+        "peekOfCode": "workers = fpv_workers + tpv_workers\nthreads = []\nif __name__ == '__main__':\n    # 获取视频对，创建 64 个进程进行切片工作\n    for i, w in enumerate(workers):\n        t = threading.Thread(target=w.run, name=f\"vc-{i}\")\n        threads.append(t)\n        t.start()\n    for t in threads:\n        t.join()",
+        "detail": "PrePipeline.pipeline",
+        "documentation": {}
+    },
+    {
+        "label": "threads",
+        "kind": 5,
+        "importPath": "PrePipeline.pipeline",
+        "description": "PrePipeline.pipeline",
+        "peekOfCode": "threads = []\nif __name__ == '__main__':\n    # 获取视频对，创建 64 个进程进行切片工作\n    for i, w in enumerate(workers):\n        t = threading.Thread(target=w.run, name=f\"vc-{i}\")\n        threads.append(t)\n        t.start()\n    for t in threads:\n        t.join()\n    print(\"All video cutting workers completed.\")",
+        "detail": "PrePipeline.pipeline",
+        "documentation": {}
+    },
+    {
+        "label": "ResizeByLongSide",
+        "kind": 6,
+        "importPath": "ttt",
+        "description": "ttt",
+        "peekOfCode": "class ResizeByLongSide:\n    def __init__(self, target_long, interpolation=InterpolationMode.BILINEAR):\n        \"\"\"\n        Args:\n            target_long (int): 缩放后的长边大小\n            interpolation: 插值方式，默认双线性\n        \"\"\"\n        self.target_long = target_long\n        self.interpolation = interpolation\n    def __call__(self, img):",
+        "detail": "ttt",
+        "documentation": {}
+    },
+    {
+        "label": "video_path",
+        "kind": 5,
+        "importPath": "ttt",
+        "description": "ttt",
+        "peekOfCode": "video_path = 'PrePipeline/data/output/tpv-6-slice--slice-000.mp4'  # 替换为你的实际视频路径\nvr = VideoReader(video_path)\nframe = vr[250]  # 获取视频的第一帧\n# 将该帧转换为PIL图像\nimg = Image.fromarray(frame.asnumpy()).convert(\"RGB\")\n# 定义转换操作\ntrain_video_transforms = transforms.Compose(\n    [\n        ResizeByLongSide(1505),  # Resize long side to 1505\n        transforms.CenterCrop((704, 1280)),  # Crop to (704, 1280)",
+        "detail": "ttt",
+        "documentation": {}
+    },
+    {
+        "label": "vr",
+        "kind": 5,
+        "importPath": "ttt",
+        "description": "ttt",
+        "peekOfCode": "vr = VideoReader(video_path)\nframe = vr[250]  # 获取视频的第一帧\n# 将该帧转换为PIL图像\nimg = Image.fromarray(frame.asnumpy()).convert(\"RGB\")\n# 定义转换操作\ntrain_video_transforms = transforms.Compose(\n    [\n        ResizeByLongSide(1505),  # Resize long side to 1505\n        transforms.CenterCrop((704, 1280)),  # Crop to (704, 1280)\n        transforms.ToTensor(),  # Convert to tensor (scale to [0, 1])",
+        "detail": "ttt",
+        "documentation": {}
+    },
+    {
+        "label": "frame",
+        "kind": 5,
+        "importPath": "ttt",
+        "description": "ttt",
+        "peekOfCode": "frame = vr[250]  # 获取视频的第一帧\n# 将该帧转换为PIL图像\nimg = Image.fromarray(frame.asnumpy()).convert(\"RGB\")\n# 定义转换操作\ntrain_video_transforms = transforms.Compose(\n    [\n        ResizeByLongSide(1505),  # Resize long side to 1505\n        transforms.CenterCrop((704, 1280)),  # Crop to (704, 1280)\n        transforms.ToTensor(),  # Convert to tensor (scale to [0, 1])\n    ]",
+        "detail": "ttt",
+        "documentation": {}
+    },
+    {
+        "label": "img",
+        "kind": 5,
+        "importPath": "ttt",
+        "description": "ttt",
+        "peekOfCode": "img = Image.fromarray(frame.asnumpy()).convert(\"RGB\")\n# 定义转换操作\ntrain_video_transforms = transforms.Compose(\n    [\n        ResizeByLongSide(1505),  # Resize long side to 1505\n        transforms.CenterCrop((704, 1280)),  # Crop to (704, 1280)\n        transforms.ToTensor(),  # Convert to tensor (scale to [0, 1])\n    ]\n)\n# 应用转换操作",
+        "detail": "ttt",
+        "documentation": {}
+    },
+    {
+        "label": "train_video_transforms",
+        "kind": 5,
+        "importPath": "ttt",
+        "description": "ttt",
+        "peekOfCode": "train_video_transforms = transforms.Compose(\n    [\n        ResizeByLongSide(1505),  # Resize long side to 1505\n        transforms.CenterCrop((704, 1280)),  # Crop to (704, 1280)\n        transforms.ToTensor(),  # Convert to tensor (scale to [0, 1])\n    ]\n)\n# 应用转换操作\ntransformed_img = train_video_transforms(img)\n# 转换后的图像的形状",
+        "detail": "ttt",
+        "documentation": {}
+    },
+    {
+        "label": "transformed_img",
+        "kind": 5,
+        "importPath": "ttt",
+        "description": "ttt",
+        "peekOfCode": "transformed_img = train_video_transforms(img)\n# 转换后的图像的形状\nprint(f\"Transformed image shape: {transformed_img.shape}\")\n# 将张量的像素值限制在 [0, 1] 范围内\ntransformed_img = torch.clamp(transformed_img, 0, 1)\n# 将张量转回PIL图像\nimg_reverted = transforms.ToPILImage()(transformed_img)\n# 保存反归一化后的图像\nimg_reverted.save('reverted_image.png')",
+        "detail": "ttt",
+        "documentation": {}
+    },
+    {
+        "label": "transformed_img",
+        "kind": 5,
+        "importPath": "ttt",
+        "description": "ttt",
+        "peekOfCode": "transformed_img = torch.clamp(transformed_img, 0, 1)\n# 将张量转回PIL图像\nimg_reverted = transforms.ToPILImage()(transformed_img)\n# 保存反归一化后的图像\nimg_reverted.save('reverted_image.png')",
+        "detail": "ttt",
+        "documentation": {}
+    },
+    {
+        "label": "img_reverted",
+        "kind": 5,
+        "importPath": "ttt",
+        "description": "ttt",
+        "peekOfCode": "img_reverted = transforms.ToPILImage()(transformed_img)\n# 保存反归一化后的图像\nimg_reverted.save('reverted_image.png')",
+        "detail": "ttt",
+        "documentation": {}
+    }
+]
