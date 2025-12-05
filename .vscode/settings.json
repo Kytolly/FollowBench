@@ -1,0 +1,6 @@
+{
+    "python.analysis.extraPaths": [
+        "D:\\Desktop\\xqy\\NUS311\\FYP\\library\\Wan2.1"
+    ],
+    "python.defaultInterpreterPath": "D:\\Anaconda\\envs\\fyp\\python.exe"
+}
