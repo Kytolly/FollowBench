@@ -1,0 +1,8 @@
+CKPT_DIR: "/opt/liblibai-models/user-workspace2/model_zoo/SVD-XT"
+REF_IMG_PATH: "/opt/liblibai-models/user-workspace2/users/xqy/project/Ego2ExowithMotion/data/example/ref.png"
+OUTPUT_PATH: "/opt/liblibai-models/user-workspace2/users/xqy/project/Ego2ExowithMotion/data/output/svd_xt_baseline.mp4"
+SEED: 42
+HEIGHT: 576
+WIDTH: 1024
+DECODE_CHUNK_SIZE: 8 
+FPS: 5

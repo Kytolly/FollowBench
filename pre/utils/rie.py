@@ -63,3 +63,4 @@ class ReferenceImageExtractor():
         imp.run()
         self.cap.release()
         print(f"saved {self.output_path} (frame {frame_idx})")
+        
