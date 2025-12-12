@@ -1,0 +1,13 @@
+REF_IMG_PATH: "/opt/liblibai-models/user-workspace2/users/xqy/project/Ego2ExowithMotion/data/example/ref.png"
+EGO_VIDEO_PATH: "/opt/liblibai-models/user-workspace2/users/xqy/project/Ego2ExowithMotion/data/example/ego.mp4"
+OUTPUT_PATH: "/opt/liblibai-models/user-workspace2/users/xqy/project/Ego2ExowithMotion/data/output/ltx_auto_captioned.mp4"
+MVLM_CKPT_PATH: '/opt/liblibai-models/user-workspace2/model_zoo/Qwen2.5-VL-7B-Instruct'
+LTXV_CKPT_PATH: "/opt/liblibai-models/user-workspace2/model_zoo/LTX-Video"
+
+VLM_DEVICE: "cuda:6"  # 7B 大模型独占一张卡
+GEN_DEVICE: "cuda:7"  # LTX 视频生成模型用另一张卡
+
+SEED: 42
+FRAME_NUM: 121
+HEIGHT: 512
+WIDTH: 768
