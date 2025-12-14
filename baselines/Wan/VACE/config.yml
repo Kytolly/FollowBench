@@ -1,8 +1,0 @@
-TASK: "vace-1.3B"
-CKPT_DIR: '/opt/liblibai-models/user-workspace2/model_zoo/Wan2.1-VACE-1.3B'
-REF_IMG_PATH: '/opt/liblibai-models/user-workspace2/users/xqy/project/Ego2ExowithMotion/data/example/ref.png'
-EGO_VIDEO_PATH: "/opt/liblibai-models/user-workspace2/users/xqy/project/Ego2ExowithMotion/data/example/ego.mp4"
-OUTPUT_PATH: "/opt/liblibai-models/user-workspace2/users/xqy/project/Ego2ExowithMotion/data/output/wan-vace.mp4"
-SIZE_KEY: "832*480"
-FRAME_NUM: 300
-PROMPT: "Third-person view, following camera shot from behind. Capturing the full body and movement. High quality, cinematic lighting, 4k, 3d game engine style."  

@@ -1,7 +1,0 @@
-TASK: "i2v-14B" 
-CKPT_DIR: "/opt/liblibai-models/user-workspace2/model_zoo/Wan2.1-I2V-14B-720P"
-REF_IMG_PATH: "/opt/liblibai-models/user-workspace2/users/xqy/project/Ego2ExowithMotion/data/example/ref.png"
-OUTPUT_PATH: "/opt/liblibai-models/user-workspace2/users/xqy/project/Ego2ExowithMotion/data/output/wan_i2v.mp4"
-SIZE_KEY: "1280*720"
-FRAME_NUM: 81
-PROMPT: "Third-person view, following camera shot from behind. Capturing the full body and movement. High quality, cinematic lighting, 4k, 3d game engine style."  

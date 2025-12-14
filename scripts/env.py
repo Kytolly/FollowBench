@@ -5,7 +5,7 @@ sys.path.append(parent_dir)
 
 import pynvml
 import torch
-from utils.get_free_gpus import get_free_gpu_ids
+from utils.gpu import get_free_gpu_ids
 
 print("Python Version:", sys.version)
 print("PyTorch CUDA Version:", torch.version.cuda)
