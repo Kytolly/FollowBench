@@ -1,12 +1,20 @@
 import pynvml
-import sys
+import gc
+import torch
+
+def clear_gpu_memory(*args):
+    '''强制清理显存'''
+    for model in args:
+        del model
+    gc.collect()
+    torch.cuda.empty_cache()
+    print("GPU Memory Cleared.")
 
 def get_free_gpu_ids(min_memory_free=96000, max_utilization=10):
-    """
-    检测空闲显卡并返回以逗号分隔的 ID 字符串。
+    '''检测空闲显卡并返回以逗号分隔的 ID 字符串。
     :param min_memory_free: 最小剩余显存 (MB)，默认 90GB
     :param max_utilization: 最大 GPU 利用率 (%)
-    """
+    '''
     pynvml.nvmlInit()
     device_count = pynvml.nvmlDeviceGetCount()
     free_ids = []
