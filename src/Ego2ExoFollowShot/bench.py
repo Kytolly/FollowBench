@@ -123,7 +123,6 @@ def main():
     for name in baseline_names:
         frames = gen_video[name]
         flicker, smooth, dynamic = calculate_temporal_consistency(frames)
-        if name not in results: results[name] = {}
         results['TF'][name] = flicker
         results['MS'][name] = smooth
         results['DD'][name] = dynamic
