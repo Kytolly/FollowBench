@@ -6,6 +6,7 @@ IMP_DICT = {
     'FigE': FigureExtractor,
     'FigORM': FigureOutRectangeMasker,
 }
+
 class ReferenceImageExtractor():
     def __init__(self, input_video_path, output_path):
         self.input_video_path = input_video_path
