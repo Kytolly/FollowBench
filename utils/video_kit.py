@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 from scipy.stats import pearsonr
+import torch
 
 def get_video_frames(video_path, max_frames=60):
     '''获取视频所有帧'''
@@ -52,3 +53,39 @@ def get_motion_series(frames):
         prev_gray = curr_gray
         
     return np.array(motion_x), np.array(motion_y)
+
+def load_video_as_tensor(video_path):
+    '''读取视频并返回 [T, C, H, W] 格式的 Tensor 归一化到 [0, 1]'''
+    frames = get_video_frames(video_path) # [H, W, C]
+    if not frames:
+        return torch.empty(0)
+    tensor = torch.stack([torch.from_numpy(f) for f in frames])
+    tensor = tensor.permute(0, 3, 1, 2).float() / 255.0
+    return tensor
+
+def load_video_to_gpu(video_path, device='cuda', target_size=None):
+    """读取视频并直接转换为 GPU Tensor [T, C, H, W]"""
+    cap = cv2.VideoCapture(str(video_path))
+    frames = []
+    count = 0
+    
+    while True:
+        ret, frame = cap.read()
+        if not ret: break
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        if target_size is not None:
+            # 如果显存紧张，可以在这里 resize成 (244, 244)
+            frame = cv2.resize(frame, (target_size[1], target_size[0]))
+        frames.append(frame)
+        count += 1
+    cap.release()
+    if not frames:
+        return None
+    
+    video_np = np.stack(frames) # [T, H, W, C]
+    tensor = torch.from_numpy(video_np).to(device, non_blocking=True)
+    
+    # [T, H, W, C] -> [T, C, H, W] & Normalize to [0, 1]
+    tensor = tensor.permute(0, 3, 1, 2).float() / 255.0
+    
+    return tensor

@@ -12,20 +12,27 @@ from haa import HumanActionAlignmentEvaluator
 from ofc import OpticalFlowCorrelationEvaluator
 from ta import TrajectoryAlignmentEvaluator
 
+import utils.gpu
+
 class DimensionEvaluator():
-    def __init__(self):
-        pass
-    
+    def __init__(self, device):
+        self.device = device
+        self.model = None
+        
     def prepare(self):
         pass
     
-    def compute(self, *kwargs):
-        pass
+    def compute(self, *args):
+        raise NotImplementedError
     
     def clear(self):
-        pass
+        if self.model is not None:
+            del self.model
+            self.model = None
+        utils.gpu.clear_gpu_memory()
     
-    def run(self, *kwargs):
+    def run(self, *args):
         self.prepare()
-        self.compute(*kwargs)
+        res = self.compute(*args)
         self.clear()
+        return res

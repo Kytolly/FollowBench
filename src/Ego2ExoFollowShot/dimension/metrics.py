@@ -3,10 +3,13 @@ import sys
 import os
 import logging
 import re
+
 import torch
-# import torch.nn.functional as F
-# from torchvision import transforms
+import torch.nn.functional as F
+from torchvision.models.optical_flow import raft_small, Raft_Small_Weights
+import torchvision.transforms.functional as TF
 from torchvision.ops import roi_align
+
 from utils import *
 
 def FrechetVideoDistance(
@@ -60,62 +63,106 @@ def FrechetVideoDistance(
     except subprocess.CalledProcessError as e:
         logging.error(f"FVD Calculation Failed with error:\n{e.stderr}")
         return None
-
-def calculate_temporal_consistency(frames):
-    '''Temporal Flickering (闪烁) 和 Motion Smoothness (平滑度) (越低越好)'''
-    '''附带计算 Dynamic Degree'''
+    
+def calculate_temporal_consistency(frames, flow_model=None, device=None):
+    """
+    基于 Tensor 计算时序一致性指标
+    Returns:
+        flickering (float): 闪烁度 (Warp Error)
+        smoothness (float): 平滑度 (Flow Acceleration)
+        dynamic_degree (float): 动态程度 (Avg Flow Magnitude)
+    """
+    if frames.dim() != 4:
+        raise ValueError(f"Input frames must be [T, C, H, W], got {frames.shape}")
+        
     if len(frames) < 3:
-        return 0.0, 0.0
-    
-    warp_errors = []       # Flickering
-    flow_diffs = []        # Smoothness
-    flow_magnitudes = []   # Dynamic
-    prev_gray = cv2.cvtColor(frames[0], cv2.COLOR_RGB2GRAY)
-    h, w = prev_gray.shape
-    grid_x, grid_y = np.meshgrid(np.arange(w), np.arange(h))
-    grid_x = grid_x.astype(np.float32)
-    grid_y = grid_y.astype(np.float32)
-    prev_flow = None
-    
-    for i in range(1, len(frames)):
-        curr_gray = cv2.cvtColor(frames[i], cv2.COLOR_RGB2GRAY)
-        flow = cv2.calcOpticalFlowFarneback(
-            prev_gray, curr_gray, None, 
-            0.5, 3, 15, 3, 5, 1.2, 0
-        )
-        # --- Dynamic Degree ---
-        mag, _ = cv2.cartToPolar(flow[..., 0], flow[..., 1])
-        avg_mag = np.mean(mag)
-        flow_magnitudes.append(avg_mag)
-        
-        map_x = grid_x + flow[..., 0]
-        map_y = grid_y + flow[..., 1]
-        warped_prev = cv2.remap(frames[i-1], map_x, map_y, interpolation=cv2.INTER_LINEAR)
-        diff = cv2.absdiff(frames[i], warped_prev)
-        diff_gray = cv2.cvtColor(diff, cv2.COLOR_RGB2GRAY)
-        border = 5
-        
-        valid_mask = np.ones_like(diff_gray, dtype=bool)
-        valid_mask[:border, :] = False
-        valid_mask[-border:, :] = False
-        valid_mask[:, :border] = False
-        valid_mask[:, -border:] = False
-        
-        frame_error = np.mean(diff_gray[valid_mask])
-        warp_errors.append(frame_error)
-        
-        # --- Motion Smoothness ---
-        if prev_flow is not None:
-            flow_diff = np.sqrt(np.sum((flow - prev_flow)**2, axis=2))
-            avg_accel = np.mean(flow_diff[valid_mask])
-            flow_diffs.append(avg_accel)
-        prev_gray = curr_gray
-        prev_flow = flow
+        return 0.0, 0.0, 0.0
 
-    flickering = np.mean(warp_errors) if warp_errors else 0.0
-    smoothness = np.mean(flow_diffs) if flow_diffs else 0.0
-    dynamic_degree = np.mean(flow_magnitudes) if flow_magnitudes else 0.0
+    if device is None:
+        device = frames.device
+
+    # 1. 准备光流模型
+    if flow_model is None:
+        # 如果未提供模型，则临时加载 (会影响性能，建议外部传入)
+        weights = Raft_Small_Weights.DEFAULT
+        flow_model = raft_small(weights=weights, progress=False).to(device)
+        flow_model.eval()
+        
+    # 2. 预处理
+    # RAFT 训练时期望输入范围是 [-1, 1] 或 [0, 255] 归一化? 
+    # Torchvision RAFT transforms 通常做 (img - 0.5) * 2 或直接输入 [0, 1] * 255
+    # 这里我们将 [0, 1] -> [-1, 1] 以获得最佳效果
+    frames_norm = (frames * 2.0) - 1.0
     
+    T, C, H, W = frames.shape
+    img1 = frames_norm[:-1] # [0, 1, ..., T-2]
+    img2 = frames_norm[1:]  # [1, 2, ..., T-1]
+    
+    # 3. 批量计算光流
+    # 为了防止显存爆炸，可以分 batch 处理，这里假设显存足够
+    # RAFT 输出 list of flow predictions，取最后一个(refined)
+    with torch.no_grad():
+        list_of_flows = flow_model(img1, img2)
+        flows = list_of_flows[-1] # [T-1, 2, H, W]
+
+    # --- Dynamic Degree ---
+    # 计算光流模长: sqrt(dx^2 + dy^2)
+    flow_mags = torch.norm(flows, p=2, dim=1) # [T-1, H, W]
+    dynamic_degree = flow_mags.mean().item()
+
+    # --- Temporal Flickering (Warp Error) ---
+    # 构造网格 grid: [T-1, H, W, 2]
+    grid_y, grid_x = torch.meshgrid(torch.arange(H, device=device), torch.arange(W, device=device), indexing='ij')
+    grid = torch.stack((grid_x, grid_y), dim=0).float() # [2, H, W]
+    grid = grid.unsqueeze(0).expand(T-1, -1, -1, -1) # [T-1, 2, H, W]
+    
+    # 加上光流 (Original logic: map_x = grid_x + flow_x)
+    # 注意：grid_sample 需要归一化到 [-1, 1]
+    # flow 单位是像素，加到 grid 上后得到采样坐标
+    sampling_grid = grid + flows
+    
+    # 归一化采样坐标到 [-1, 1]
+    # x_norm = 2 * (x / (W - 1)) - 1
+    # y_norm = 2 * (y / (H - 1)) - 1
+    sampling_grid[:, 0, :, :] = 2.0 * sampling_grid[:, 0, :, :] / (W - 1.0) - 1.0
+    sampling_grid[:, 1, :, :] = 2.0 * sampling_grid[:, 1, :, :] / (H - 1.0) - 1.0
+    
+    # [T-1, 2, H, W] -> [T-1, H, W, 2] for grid_sample
+    sampling_grid = sampling_grid.permute(0, 2, 3, 1)
+    
+    # Warp prev frame (img1) to curr frame (img2)
+    # 注意：grid_sample 默认 input 是 [0, 1] 还是 [-1, 1] 取决于 frames 的原始值
+    # 我们这里用原始 frames (0-1) 进行 warp，方便计算 error
+    frames_orig1 = frames[:-1]
+    frames_orig2 = frames[1:]
+    
+    warped_prev = F.grid_sample(frames_orig1, sampling_grid, mode='bilinear', padding_mode='border', align_corners=True)
+    
+    # 计算误差 L1 Loss
+    diff = torch.abs(frames_orig2 - warped_prev)
+    
+    # 边缘 Mask (Original: border=5)
+    border = 5
+    if H > 2*border and W > 2*border:
+        mask = torch.zeros_like(diff)
+        mask[..., border:-border, border:-border] = 1.0
+        flickering = (diff * mask).sum() / mask.sum()
+    else:
+        flickering = diff.mean()
+    
+    flickering = flickering.item()
+
+    # --- Motion Smoothness ---
+    # E_smooth = || F_t - F_{t-1} ||^2 (加速度)
+    # flows: [0->1, 1->2, 2->3 ...]
+    # flow_diff: flows[1:] - flows[:-1]
+    if T > 2:
+        flow_diffs = flows[1:] - flows[:-1] # [T-2, 2, H, W]
+        # L2 norm over (dx, dy) -> mean over spatial and temporal
+        smoothness = torch.norm(flow_diffs, p=2, dim=1).mean().item()
+    else:
+        smoothness = 0.0
+
     return flickering, smoothness, dynamic_degree
 
 def AppearanceConsistency(dinov2_model, dino_transform, detection_model, ref_emb, video_tensor):
@@ -174,18 +221,10 @@ def AppearanceConsistency(dinov2_model, dino_transform, detection_model, ref_emb
 
 def CameraCenteringError(best_box, img_h, img_w):
     """计算 Camera Centering Error"""
-    # Box 中心
-    cx = (best_box[0] + best_box[2]) / 2.0; cy = (best_box[1] + best_box[3]) / 2.0
-    
-    # 画面中心
-    img_cx = img_w / 2.0; img_cy = img_h / 2.0
-    
-    # 计算欧氏距离
-    dist = torch.sqrt((cx - img_cx)**2 + (cy - img_cy)**2)
-    
-    # 归一化 (除以中心到角落的距离)
-    max_dist = torch.sqrt(torch.tensor(img_cx**2 + img_cy**2, device=best_box.device))
-    
+    cx = (best_box[0] + best_box[2]) / 2.0; cy = (best_box[1] + best_box[3]) / 2.0 # Box 中心
+    img_cx = img_w / 2.0; img_cy = img_h / 2.0 # 画面中心
+    dist = torch.sqrt((cx - img_cx)**2 + (cy - img_cy)**2) # 计算欧氏距离
+    max_dist = torch.sqrt(torch.tensor(img_cx**2 + img_cy**2, device=best_box.device)) # 归一化 (除以中心到角落的距离)
     error = dist / max_dist
     return error.item()
 

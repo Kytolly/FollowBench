@@ -13,7 +13,7 @@ from torchvision.models.detection import (
     KeypointRCNN_ResNet50_FPN_Weights
 )
 
-from metrics import *
+from Ego2ExoFollowShot.dimension.metrics import *
 from utils import *
 
 def load_config(config_path):
