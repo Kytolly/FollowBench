@@ -5,7 +5,6 @@ import numpy as np
 import sys
 import os
 
-# 确保能导入 src
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from src.Ego2ExoFollowShot.dimension.aq import AestheticQualityEvaluator
@@ -20,41 +19,51 @@ class TestQualityMetrics(unittest.TestCase):
         # [T, C, H, W]
         self.dummy_tensor = torch.rand(5, 3, 224, 224) 
 
-    @patch('src.Ego2ExoFollowShot.dimension.metric.AestheticQuality')
     @patch('utils.pretrain.load_aesthetic_metric')
-    def test_aq(self, mock_load, mock_calc):
-        """测试 AQ 流程"""
-        mock_load.return_value = MagicMock()
-        mock_calc.return_value = 5.5
+    def test_aq(self, mock_load):
+        """测试 AQ (运行真实 Metric 逻辑，Mock 模型)"""
+        # 1. 配置 Mock 模型
+        mock_model = MagicMock()
+        # 模型返回 Tensor [B, 1]
+        mock_model.return_value = torch.tensor([0.8]) 
+        mock_load.return_value = mock_model
         
+        # 2. 初始化 Evaluator
         evaluator = AestheticQualityEvaluator(self.device)
-        # Mock 内部模型
-        evaluator.model = MagicMock()
+        evaluator.model = mock_model # 强制注入 Mock
         
+        # 3. 运行
         score = evaluator.compute(tensor_gen=self.dummy_tensor)
-        self.assertEqual(score, 5.5)
-        mock_calc.assert_called_once()
+        
+        # 4. 验证
+        # 5 帧，batch=8 -> 1次推理，返回 0.8 -> mean = 0.8
+        self.assertAlmostEqual(score, 0.8)
 
-    @patch('src.Ego2ExoFollowShot.dimension.metric.ImagingQuality')
     @patch('utils.pretrain.load_imaging_quality_metric')
-    def test_iq(self, mock_load, mock_calc):
-        """测试 IQ 流程"""
-        mock_load.return_value = MagicMock()
-        mock_calc.return_value = 0.8
+    def test_iq(self, mock_load):
+        """测试 IQ (运行真实 Metric 逻辑，Mock 模型)"""
+        # 1. 配置 Mock 模型
+        mock_model = MagicMock()
+        mock_model.return_value = torch.tensor([0.6])
+        mock_load.return_value = mock_model
         
         evaluator = ImagingQualityEvaluator(self.device)
-        evaluator.model = MagicMock()
+        evaluator.model = mock_model
         
+        # 2. 运行
         score = evaluator.compute(tensor_gen=self.dummy_tensor)
-        self.assertEqual(score, 0.8)
+        
+        # 3. 验证
+        self.assertAlmostEqual(score, 0.6)
 
-    @patch('src.Ego2ExoFollowShot.dimension.metric.extract_i3d_features')
+    @patch('utils.video_kit.extract_i3d_features')
     @patch('src.Ego2ExoFollowShot.dimension.metric.FrechetVideoDistance')
     @patch('utils.pretrain.load_i3d')
     def test_fvd_caching(self, mock_load, mock_dist, mock_extract):
-        """测试 FVD 缓存"""
-        # 模拟特征提取返回 Numpy Array (因为 metric.extract_i3d_features 现在返回 numpy)
+        """测试 FVD 缓存 (Mock 特征提取)"""
+        # 模拟特征提取: 返回 Numpy Array (因为 metric.extract_i3d_features 现在返回 numpy)
         feat_dim = 10
+        # 两次调用: Gen 和 GT
         mock_extract.side_effect = [np.zeros((1, feat_dim)), np.ones((1, feat_dim))]
         mock_dist.return_value = 100.0
         

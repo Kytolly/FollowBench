@@ -1,7 +1,7 @@
 import numpy as np
 
 from . import DimensionEvaluator
-from utils import pretrain
+from utils import pretrain, video_kit
 from . import metric
 
 class FrechetVideoDistanceEvaluator(DimensionEvaluator):
@@ -19,7 +19,7 @@ class FrechetVideoDistanceEvaluator(DimensionEvaluator):
             # cache hits
             feat_gen = global_cache[gen_key]
         else: # cache not hits
-            feat_gen = metric.extract_i3d_features(video_gen, self.model)
+            feat_gen = video_kit.extract_i3d_features(video_gen, self.model)
             if global_cache is not None: global_cache[gen_key] = feat_gen
 
         gt_key = f"i3d_feat_gt_{video_id}"
@@ -27,7 +27,7 @@ class FrechetVideoDistanceEvaluator(DimensionEvaluator):
             # cache hits
             feat_gt = global_cache[gt_key]
         else: # cache not hits
-            feat_gt = metric.extract_i3d_features(video_gt, self.model)
+            feat_gt = video_kit.extract_i3d_features(video_gt, self.model)
             if global_cache is not None: global_cache[gt_key] = feat_gt
 
         return metric.FrechetVideoDistance(feat_gen, feat_gt)
