@@ -4,6 +4,7 @@ import pyiqa
 import torch
 from torch import Tensor
 import torch.nn.functional as F
+from pytorchvideo.models.resnet import create_resnet
 from torchvision import transforms
 from torchvision.models.detection import KeypointRCNN, keypointrcnn_resnet50_fpn, KeypointRCNN_ResNet50_FPN_Weights
 
@@ -96,3 +97,12 @@ def get_keypoint_results(video_tensor, keypoint_detector: KeypointRCNN):
                 else:
                     results.append(None)
     return results
+
+def load_i3d(device):
+    """
+    加载 I3D 模型。
+    """
+    model = create_resnet(input_channel=3, model_depth=50, model_num_class=400)
+    model.eval()
+    model.to(device)
+    return model

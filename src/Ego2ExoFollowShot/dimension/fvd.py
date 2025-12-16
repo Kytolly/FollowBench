@@ -1,23 +1,33 @@
+import numpy as np
+
 from . import DimensionEvaluator
-from dimension.metrics import FrechetVideoDistance
-import yaml
+from utils import pretrain
+from . import metric
 
 class FrechetVideoDistanceEvaluator(DimensionEvaluator):
-    def compute(self, **kwargs):
-        return None # 不支持单视频计算
+    def prepare(self):
+        self.model = pretrain.load_i3d(self.device)
 
-    def compute_dataset(self, gen_dir, gt_dir):
-        # 读取配置 (假设 config 路径固定或通过某种方式传入，这里简化处理)
-        # 实际项目中建议将 config 传入 Evaluator init
-        with open('src/Ego2ExoFollowShot/config.yml', 'r') as f:
-            config = yaml.safe_load(f)
-            
-        return FrechetVideoDistance(
-            repo_path=config['FVD']['STYLEGANV_REPO_PATH'],
-            real_videos_dir=str(gt_dir),
-            gen_videos_dir=str(gen_dir),
-            mirror=config['FVD']['MIRROR'],
-            gpus=config['FVD']['GPUS'],
-            resolution=config['FVD']['RESOLUTION'],
-            metrics=config['FVD']['METRICS'],
-        )
+    def compute(self, **kwargs):
+        video_gen = kwargs.get('tensor_gen')
+        video_gt = kwargs.get('tensor_gt')
+        video_id = kwargs.get('video_id')
+        global_cache = kwargs.get('global_cache')
+
+        gen_key = f"i3d_feat_gen_{video_id}"
+        if global_cache is not None and gen_key in global_cache:
+            # cache hits
+            feat_gen = global_cache[gen_key]
+        else: # cache not hits
+            feat_gen = metric.extract_i3d_features(video_gen, self.model)
+            if global_cache is not None: global_cache[gen_key] = feat_gen
+
+        gt_key = f"i3d_feat_gt_{video_id}"
+        if global_cache is not None and gt_key in global_cache:
+            # cache hits
+            feat_gt = global_cache[gt_key]
+        else: # cache not hits
+            feat_gt = metric.extract_i3d_features(video_gt, self.model)
+            if global_cache is not None: global_cache[gt_key] = feat_gt
+
+        return metric.FrechetVideoDistance(feat_gen, feat_gt)

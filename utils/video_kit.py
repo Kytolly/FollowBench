@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 from scipy.stats import pearsonr
 import torch
+from torch import Tensor
 
 def get_video_frames(video_path, max_frames=60):
     '''获取视频所有帧'''
@@ -120,3 +121,17 @@ def get_traj(results):
             cy = (box[1] + box[3]) / 2.0
             traj.append(np.array([cx, cy]))
     return traj
+
+def extract_i3d_features(video_tensor: Tensor, i3d_model):
+    """
+    提取 I3D 特征
+    Args:
+        video_tensor: [T, 3, H, W] (0-1 float)
+    Returns:
+        features: numpy array [1, D]
+    """
+    video_input = video_tensor.permute(1, 0, 2, 3).unsqueeze(0) # [1, C, T, H, W]
+    video_input = (video_input * 2.0) - 1.0 
+    with torch.no_grad():
+        features = i3d_model(video_input) # [1, D]
+    return features.cpu().numpy()

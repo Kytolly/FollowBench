@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.linalg import sqrtm
 
 import torch
 from torch import Tensor
@@ -10,19 +11,23 @@ from utils.math import p_corr
 from utils.video_kit import get_traj, compute_flow
 from . import metric
 
-def AestheticQuality(video_gen: Tensor, aq_model, aq_transform, device):
-    """ 计算美学质量 (LAION-Aesthetics) """
-    T = video_gen.shape[0]
+def AestheticQuality(video_gen: Tensor, aq_model, batch_size=8):
+    """
+    计算美学质量 (LAION-Aesthetics) 
+    Args:
+        video_gen: [T, 3, H, W] tensor
+        aq_model: pyiqa model
+    """
     scores = []
-    from torchvision.transforms.functional import to_pil_image
-    
     with torch.no_grad():
-        for i in range(T):
-            img_pil = to_pil_image(video_gen[i].cpu())
-            input_tensor = aq_transform(img_pil).unsqueeze(0).to(device)
-            score = aq_model(input_tensor)
-            scores.append(score.item())
-    return np.mean(scores)
+        for i in range(0, len(video_gen), batch_size):
+            batch = video_gen[i : i + batch_size]
+            res = aq_model(batch) # [B, 1]
+            scores.append(res.view(-1)) # 展平并收集 Tensor
+    if not scores:
+        return 0.0
+    all_scores = torch.cat(scores)
+    return all_scores.mean().item()
 
 def AppearanceConsistency(
     ref_emb,
@@ -145,19 +150,29 @@ def DynamicDegree(gen_flows: Tensor):
     return dd
 
 def FrechetVideoDistance(feat_gen: np.ndarray, feat_gt: np.ndarray):
-    """ 计算 FVD (假设输入已经是 numpy feature array) """
-    from scipy.linalg import sqrtm
-    
+    """
+    计算 FVD (Fréchet Video Distance)
+    使用 Scipy 进行矩阵运算以保证数值稳定性
+    """
+    if feat_gen.shape[0] == 0 or feat_gt.shape[0] == 0:
+        return 0.0
     mu1, sigma1 = np.mean(feat_gen, axis=0), np.cov(feat_gen, rowvar=False)
     mu2, sigma2 = np.mean(feat_gt, axis=0), np.cov(feat_gt, rowvar=False)
+    if feat_gen.shape[0] == 1: sigma1 = 0.0
+    if feat_gt.shape[0] == 1: sigma2 = 0.0
     
     diff = mu1 - mu2
-    covmean = sqrtm(sigma1.dot(sigma2))
-    if np.iscomplexobj(covmean):
-        covmean = covmean.real 
-
-    fvd_score = np.dot(diff, diff) + np.trace(sigma1 + sigma2 - 2.0 * covmean)
-    return fvd_score.item()
+    if np.isscalar(sigma1) and np.isscalar(sigma2):
+        covmean = np.sqrt(sigma1 * sigma2)
+        trace_term = sigma1 + sigma2 - 2.0 * covmean
+        fvd = diff.dot(diff) + trace_term
+    else:
+        covmean = sqrtm(sigma1.dot(sigma2))
+        if np.iscomplexobj(covmean):
+            covmean = covmean.real
+        fvd = diff.dot(diff) + np.trace(sigma1 + sigma2 - 2.0 * covmean)
+        
+    return float(fvd)
 
 def HumanActionAlignment(gen_results, gt_results, H, W):
     """
@@ -211,6 +226,24 @@ def HumanActionAlignment(gen_results, gt_results, H, W):
         frame_errors.append(normalized_error)
         
     return np.mean(frame_errors) if frame_errors else 1.0
+
+def ImagingQuality(video_gen: Tensor, iq_model, batch_size=4):
+    """
+    计算图像质量 (MUSIQ) 
+    Args:
+        video_gen: [T, 3, H, W] tensor
+        iq_model: pyiqa model
+    """
+    scores = []
+    with torch.no_grad():
+        for i in range(0, len(video_gen), batch_size):
+            batch = video_gen[i : i + batch_size]
+            res = iq_model(batch)
+            scores.append(res.view(-1))
+    if not scores:
+        return 0.0
+    all_scores = torch.cat(scores)
+    return all_scores.mean().item()
 
 def MotionSmoothness(gen_flows: Tensor):
     '''计算运动平滑性 光流场在时间上的变化率'''
