@@ -1,24 +1,27 @@
-from . import DimensionEvaluator
 from torchvision.models.detection import fasterrcnn_resnet50_fpn, FasterRCNN_ResNet50_FPN_Weights
-import torch
+
+from utils.pretrain import get_detection_results
+from .metric import ViewpointValidity
+from . import DimensionEvaluator
 
 class ViewpointValidityEvaluator(DimensionEvaluator):
     def prepare(self):
-        self.det = fasterrcnn_resnet50_fpn(weights=FasterRCNN_ResNet50_FPN_Weights.DEFAULT).to(self.device)
-        self.det.eval()
+        self.model = fasterrcnn_resnet50_fpn(weights=FasterRCNN_ResNet50_FPN_Weights.DEFAULT).to(self.device).eval()
 
-    def compute(self, video_gen, video_ego, video_gt, path_ref, **kwargs):
-        detected_count = 0
-        total_samples = 0
-        step = 5
+    def compute(self, **kwargs):
+        # parse kwargs
+        video_gen = kwargs.get('tensor_gen')
+        video_id = kwargs.get('video_id')
+        global_cache = kwargs.get('global_cache')
         
-        with torch.no_grad():
-            for i in range(0, len(video_gen), step):
-                total_samples += 1
-                # video_gen[i]: [C, H, W] -> unsqueeze -> [1, C, H, W]
-                pred = self.det(video_gen[i].unsqueeze(0))[0]
-                # 检查是否有人
-                if ((pred['labels'] == 1) & (pred['scores'] > 0.7)).any():
-                    detected_count += 1
-                    
-        return detected_count / total_samples if total_samples > 0 else 0.0
+        cache_key = f"detection_gen_{video_id}"
+        if global_cache is not None and cache_key in global_cache:
+            # cache hits
+            detections = global_cache[cache_key]
+        else: # cache not hits
+            sampled_video = video_gen[::5]
+            detections = get_detection_results(sampled_video, self.model)
+            if global_cache is not None:
+                global_cache[cache_key] = detections
+
+        return ViewpointValidity(detections)

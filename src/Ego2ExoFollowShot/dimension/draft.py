@@ -7,7 +7,6 @@ import re
 import torch
 import torch.nn.functional as F
 import torchvision.transforms.functional as TF
-from torchvision.ops import roi_align
 
 def FrechetVideoDistance(
     repo_path,
@@ -60,107 +59,6 @@ def FrechetVideoDistance(
     except subprocess.CalledProcessError as e:
         logging.error(f"FVD Calculation Failed with error:\n{e.stderr}")
         return None
-    
-def calculate_temporal_consistency(frames, flow_model=None, device=None):
-    """
-    基于 Tensor 计算时序一致性指标
-    Returns:
-        flickering (float): 闪烁度 (Warp Error)
-        smoothness (float): 平滑度 (Flow Acceleration)
-        dynamic_degree (float): 动态程度 (Avg Flow Magnitude)
-    """
-    if frames.dim() != 4:
-        raise ValueError(f"Input frames must be [T, C, H, W], got {frames.shape}")
-        
-    if len(frames) < 3:
-        return 0.0, 0.0, 0.0
-
-    if device is None:
-        device = frames.device
-
-    # 1. 准备光流模型
-    if flow_model is None:
-        # 如果未提供模型，则临时加载 (会影响性能，建议外部传入)
-        weights = Raft_Small_Weights.DEFAULT
-        flow_model = raft_small(weights=weights, progress=False).to(device)
-        flow_model.eval()
-        
-    # 2. 预处理
-    # RAFT 训练时期望输入范围是 [-1, 1] 或 [0, 255] 归一化? 
-    # Torchvision RAFT transforms 通常做 (img - 0.5) * 2 或直接输入 [0, 1] * 255
-    # 这里我们将 [0, 1] -> [-1, 1] 以获得最佳效果
-    frames_norm = (frames * 2.0) - 1.0
-    
-    T, C, H, W = frames.shape
-    img1 = frames_norm[:-1] # [0, 1, ..., T-2]
-    img2 = frames_norm[1:]  # [1, 2, ..., T-1]
-    
-    # 3. 批量计算光流
-    # 为了防止显存爆炸，可以分 batch 处理，这里假设显存足够
-    # RAFT 输出 list of flow predictions，取最后一个(refined)
-    with torch.no_grad():
-        list_of_flows = flow_model(img1, img2)
-        flows = list_of_flows[-1] # [T-1, 2, H, W]
-
-    # --- Dynamic Degree ---
-    # 计算光流模长: sqrt(dx^2 + dy^2)
-    flow_mags = torch.norm(flows, p=2, dim=1) # [T-1, H, W]
-    dynamic_degree = flow_mags.mean().item()
-
-    # --- Temporal Flickering (Warp Error) ---
-    # 构造网格 grid: [T-1, H, W, 2]
-    grid_y, grid_x = torch.meshgrid(torch.arange(H, device=device), torch.arange(W, device=device), indexing='ij')
-    grid = torch.stack((grid_x, grid_y), dim=0).float() # [2, H, W]
-    grid = grid.unsqueeze(0).expand(T-1, -1, -1, -1) # [T-1, 2, H, W]
-    
-    # 加上光流 (Original logic: map_x = grid_x + flow_x)
-    # 注意：grid_sample 需要归一化到 [-1, 1]
-    # flow 单位是像素，加到 grid 上后得到采样坐标
-    sampling_grid = grid + flows
-    
-    # 归一化采样坐标到 [-1, 1]
-    # x_norm = 2 * (x / (W - 1)) - 1
-    # y_norm = 2 * (y / (H - 1)) - 1
-    sampling_grid[:, 0, :, :] = 2.0 * sampling_grid[:, 0, :, :] / (W - 1.0) - 1.0
-    sampling_grid[:, 1, :, :] = 2.0 * sampling_grid[:, 1, :, :] / (H - 1.0) - 1.0
-    
-    # [T-1, 2, H, W] -> [T-1, H, W, 2] for grid_sample
-    sampling_grid = sampling_grid.permute(0, 2, 3, 1)
-    
-    # Warp prev frame (img1) to curr frame (img2)
-    # 注意：grid_sample 默认 input 是 [0, 1] 还是 [-1, 1] 取决于 frames 的原始值
-    # 我们这里用原始 frames (0-1) 进行 warp，方便计算 error
-    frames_orig1 = frames[:-1]
-    frames_orig2 = frames[1:]
-    
-    warped_prev = F.grid_sample(frames_orig1, sampling_grid, mode='bilinear', padding_mode='border', align_corners=True)
-    
-    # 计算误差 L1 Loss
-    diff = torch.abs(frames_orig2 - warped_prev)
-    
-    # 边缘 Mask (Original: border=5)
-    border = 5
-    if H > 2*border and W > 2*border:
-        mask = torch.zeros_like(diff)
-        mask[..., border:-border, border:-border] = 1.0
-        flickering = (diff * mask).sum() / mask.sum()
-    else:
-        flickering = diff.mean()
-    
-    flickering = flickering.item()
-
-    # --- Motion Smoothness ---
-    # E_smooth = || F_t - F_{t-1} ||^2 (加速度)
-    # flows: [0->1, 1->2, 2->3 ...]
-    # flow_diff: flows[1:] - flows[:-1]
-    if T > 2:
-        flow_diffs = flows[1:] - flows[:-1] # [T-2, 2, H, W]
-        # L2 norm over (dx, dy) -> mean over spatial and temporal
-        smoothness = torch.norm(flow_diffs, p=2, dim=1).mean().item()
-    else:
-        smoothness = 0.0
-
-    return flickering, smoothness, dynamic_degree
 
 def AppearanceConsistency(dinov2_model, dino_transform, detection_model, ref_emb, video_tensor):
     '''计算外观一致性 (Re-ID Score)'''
@@ -216,82 +114,9 @@ def AppearanceConsistency(dinov2_model, dino_transform, detection_model, ref_emb
         
     return sum(scores) / len(scores)
 
-def CameraCenteringError(best_box, img_h, img_w):
-    """计算 Camera Centering Error"""
-    cx = (best_box[0] + best_box[2]) / 2.0; cy = (best_box[1] + best_box[3]) / 2.0 # Box 中心
-    img_cx = img_w / 2.0; img_cy = img_h / 2.0 # 画面中心
-    dist = torch.sqrt((cx - img_cx)**2 + (cy - img_cy)**2) # 计算欧氏距离
-    max_dist = torch.sqrt(torch.tensor(img_cx**2 + img_cy**2, device=best_box.device)) # 归一化 (除以中心到角落的距离)
-    error = dist / max_dist
-    return error.item()
 
-def calculate_subject_metrics(dinov2_model, dino_transform, detection_model, ref_emb, video_tensor):
-    device = dinov2_model.device
-    if ref_emb is None: return 0.0
-    app_scores = []      # 外观一致性分数列表
-    center_errors = []   # 中心误差列表
-    detected_count = 0   # 检测到的帧数
-    total_samples = 0    # 总采样帧数
-    step = 5 # 采样间隔
-    detection_model.eval()
-    _, _, H, W = video_tensor.shape
-    
-    for i in range(0, len(video_tensor), step):
-        total_samples += 1
-        frame_tensor = video_tensor[i] # [C, H, W]
-        det_input = frame_tensor.unsqueeze(0) # [1, C, H, W]
-        with torch.no_grad():
-            prediction = detection_model(det_input)[0]
-        
-        # 筛选置信度最高的人
-        best_box = None
-        max_score = 0
-        # 找到所有 label==1 (person) 且 score > 0.7 的索引
-        valid_mask = (prediction['labels'] == 1) & (prediction['scores'] > 0.7)
-        if valid_mask.any():
-            detected_count += 1
-            # 找到最高分的索引
-            valid_scores = prediction['scores'][valid_mask]
-            valid_boxes = prediction['boxes'][valid_mask]
-            
-            best_idx = torch.argmax(valid_scores)
-            best_box = valid_boxes[best_idx] # [x1, y1, x2, y2]
-            
-            # --- Camera Centering Error ---
-            c_err = CameraCenteringError(best_box, H, W)
-            center_errors.append(c_err)
-            
-            # --- Appearance Consistency ---
-            # 构建 RoI 格式
-            batch_index = torch.zeros((1, 1), device=device)
-            roi_box = torch.cat([batch_index, best_box.view(1, 4)], dim=1) # [1, 5]
-            
-            # 在 GPU 上做 Crop + Resize
-            person_crop = roi_align(
-                input=det_input, # [1, C, H, W]
-                boxes=roi_box,
-                output_size=(224, 224),
-                spatial_scale=1.0, # 因为我们在原图上操作
-                aligned=True # 提高精度
-            ) # [1, C, 224, 224]
-            
-            # Normalize + DINOv2 推理
-            person_crop = dino_transform(person_crop)
-            with torch.no_grad():
-                frame_emb = dinov2_model(person_crop)
-            
-            # 计算相似度
-            sim = torch.nn.functional.cosine_similarity(ref_emb, frame_emb).item()
-            app_scores.append(sim)
-        else: # 如果没检测到人：
-            app_scores.append(0.0)
-            center_errors.append(1.0)
-            
 
-    avg_app_score = sum(app_scores) / len(app_scores) if app_scores else 0.0
-    avg_center_error = sum(center_errors) / len(center_errors) if center_errors else 1.0
-    validity_score = detected_count / total_samples if total_samples > 0 else 0.0
-    return avg_app_score, avg_center_error, validity_score
+
 
 def BackgroundSemanticConsistency(
     clip_model, 
@@ -414,5 +239,3 @@ def HumanActionAlignment(gen_frames, ref_frames, model, device):
         return 0.0
     return sum(scores) / len(scores)
 
-def TrajectoryAlignment(frames, device):
-    pass

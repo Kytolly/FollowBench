@@ -1,10 +1,11 @@
+import torch
 from torch import Tensor
-from torchvision.models.optical_flow import raft_small, Raft_Small_Weights
+from torchvision.ops import roi_align
 
 import utils.video_kit
 from . import metric
 
-def calculate_all_flow_metrics(
+def calculate_metrics_based_flow_model(
     gen_frames: Tensor,
     gt_frames=None,
     metrics_to_compute=None,
@@ -13,7 +14,7 @@ def calculate_all_flow_metrics(
     """基于预加载的 RAFT 模型计算所有基于光流的指标 TF, MS, DD, OFC
     Args:
         gen_frames: 生成视频 Tensor [T, C, H, W] (0-1)
-        gt_frames:  GT视频 Tensor [T, C, H, W] (0-1)。
+        gt_frames:  GT视频 Tensor [T, C, H, W] (0-1)
         如果提供，则计算 OFC。
     """
     if device is None: device = gen_frames.device

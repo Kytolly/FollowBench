@@ -23,9 +23,9 @@ class TestFlowMetrics(unittest.TestCase):
         # 模拟 Bench 类传递的参数：告知需要计算哪些指标
         self.metrics_to_compute = {'tf', 'ms', 'dd', 'ofc'}
 
-    @patch('src.Ego2ExoFollowShot.dimension.tf.calculate_all_flow_metrics')
-    @patch('src.Ego2ExoFollowShot.dimension.ms.calculate_all_flow_metrics')
-    @patch('src.Ego2ExoFollowShot.dimension.dd.calculate_all_flow_metrics')
+    @patch('src.Ego2ExoFollowShot.dimension.tf.calculate_metrics_based_flow_model')
+    @patch('src.Ego2ExoFollowShot.dimension.ms.calculate_metrics_based_flow_model')
+    @patch('src.Ego2ExoFollowShot.dimension.dd.calculate_metrics_based_flow_model')
     def test_shared_caching_logic(self, mock_calc_dd, mock_calc_ms, mock_calc_tf):
         """
         核心测试：验证 TF, MS, DD 是否真的共享了缓存，避免重复计算
@@ -104,7 +104,7 @@ class TestFlowMetrics(unittest.TestCase):
         
         print("✅ Shared Caching Logic Verified: Computation ran only once.")
 
-    @patch('src.Ego2ExoFollowShot.dimension.ofc.calculate_all_flow_metrics')
+    @patch('src.Ego2ExoFollowShot.dimension.ofc.calculate_metrics_based_flow_model')
     def test_ofc_evaluator(self, mock_calc_ofc):
         """
         测试 OFC (光流相关性)
@@ -128,7 +128,7 @@ class TestFlowMetrics(unittest.TestCase):
         self.assertEqual(score, 0.85)
         
         # 验证参数传递
-        # compute 内部调用 calculate_all_flow_metrics(gen_frames=..., gt_frames=...)
+        # compute 内部调用 calculate_metrics_based_flow_model(gen_frames=..., gt_frames=...)
         call_kwargs = mock_calc_ofc.call_args.kwargs
         self.assertTrue(torch.is_tensor(call_kwargs['gen_frames']), "gen_frames should be Tensor")
         self.assertTrue(torch.is_tensor(call_kwargs['gt_frames']), "gt_frames should be Tensor")

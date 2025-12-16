@@ -11,3 +11,14 @@ My final year project repo
 - [ ] Baseline 跑分： 运行 CogVideo, LTX, SVDXT, WanI2V 在你的 Test Set 上生成视频。
 - [ ] 可视化: 完善雷达图 轨迹可视化图
 - [ ] 数学推理
+
+## git cmomit
+类型,含义,示例场景
+feat,新功能 (Feature),feat(metric): implement Trajectory Alignment evaluator
+fix,修补 Bug,fix(test): resolve AttributeError in lifecycle test
+test,测试相关,test(flow): add unit tests for shared caching logic
+refactor,代码重构 (不新增功能或修复Bug),refactor(bench): optimize metric calculation pipeline
+style,"格式调整 (空格, 分号等)",style: reformat code with black
+docs,文档更新,docs: update README with todo list
+chore,构建/工具/依赖更新,chore: update .gitignore to exclude .vscode
+perf,性能优化,perf(flow): optimize optical flow calculation with batching
