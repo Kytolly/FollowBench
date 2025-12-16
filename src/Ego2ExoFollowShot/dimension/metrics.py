@@ -17,13 +17,7 @@ def calculate_all_flow_metrics(
         如果提供，则计算 OFC。
     """
     if device is None: device = gen_frames.device
-    
-    # 准备模型
-    if flow_model == None: 
-        flow_model=raft_small(
-                    weights=Raft_Small_Weights.DEFAULT, 
-                    progress=False)
-        flow_model.to(device).eval()
+    assert flow_model is not None 
 
     # 计算生成视频光流
     gen_norm = (gen_frames * 2.0) - 1.0

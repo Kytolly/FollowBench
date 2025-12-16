@@ -4,9 +4,8 @@ from . import DimensionEvaluator
 from .metrics import calculate_all_flow_metrics
 
 class TemporalFlickeringEvaluator(DimensionEvaluator):
-    def prepare(self, device='cuda'):
-        self.device = device
-        self.flow_model = raft_small(weights=Raft_Small_Weights.DEFAULT).to(device).eval()
+    def prepare(self):
+        self.model = raft_small(weights=Raft_Small_Weights.DEFAULT).to(self.device).eval()
 
     def compute(self, **kwargs):
         # parse kwargs
