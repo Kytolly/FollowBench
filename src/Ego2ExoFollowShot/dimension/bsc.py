@@ -22,7 +22,6 @@ class BackgroundSemanticConsistencyEvaluator(DimensionEvaluator):
         pillow_ref: Image = kwargs.get('pillow_ref')
         video_id = kwargs.get('video_id')
         global_cache = kwargs.get('global_cache')
-        self.prepare()
         
 
         cache_key = f"detection_gen_{video_id}"

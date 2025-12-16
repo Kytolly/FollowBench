@@ -3,7 +3,7 @@ from dimension.metrics import FrechetVideoDistance
 import yaml
 
 class FrechetVideoDistanceEvaluator(DimensionEvaluator):
-    def compute(self, *args, **kwargs):
+    def compute(self, **kwargs):
         return None # 不支持单视频计算
 
     def compute_dataset(self, gen_dir, gt_dir):

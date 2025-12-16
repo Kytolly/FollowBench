@@ -3,9 +3,6 @@ from utils import pretrain
 import torch
 
 class ImagingQualityEvaluator(DimensionEvaluator):
-    def __init__(self):
-        super().__init__()
-        
     def prepare(self, ):
         self.model = pretrain.load_imaging_quality_metric(self.device) # MUSIQ
 

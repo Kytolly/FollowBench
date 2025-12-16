@@ -20,7 +20,6 @@ class CameraCenteringErrorEvaluator(DimensionEvaluator):
             # cache hits
             detections = global_cache[cache_key]
         else:# cache not hits
-            self.prepare()
             detections = utils.pretrain.get_detection_results(video_gen, self.model)
             if global_cache is not None:
                 global_cache[cache_key] = detections

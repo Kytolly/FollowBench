@@ -23,7 +23,7 @@ jobs:
     - name: Install dependencies
       run: |
         # python -m pip install --upgrade pip
-        # 安装 PyTorch CPU 版本以加快 CI 速度（单元测试通常不需要 GPU）
+        # 安装 PyTorch CPU 版本以加快 CI 速度 单元测试通常不需要 GPU
         # pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
         # 安装其他依赖
         # if [ -f requirements.txt ]; then pip install -r requirements.txt; else pip install numpy scipy Pillow pyyaml transformers pyiqa pynvml; fi

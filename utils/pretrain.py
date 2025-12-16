@@ -5,6 +5,7 @@ import torch
 from torch import Tensor
 import torch.nn.functional as F
 from torchvision import transforms
+from torchvision.models.detection import KeypointRCNN, keypointrcnn_resnet50_fpn, KeypointRCNN_ResNet50_FPN_Weights
 
 def load_dinov2(device):
     print("Loading DINOv2 for Appearance Consistency...")
@@ -60,6 +61,38 @@ def get_detection_results(video_tensor: Tensor, detector, device=None):
                     box = pred['boxes'][valid][best_idx].cpu()
                     score = pred['scores'][valid][best_idx].cpu()
                     results.append((box, score))
+                else:
+                    results.append(None)
+    return results
+
+def get_keypoint_results(video_tensor, keypoint_detector: KeypointRCNN):
+    """
+    计算视频的人体关键点 (Keypoint Detection)
+    
+    Args:
+        video_tensor: [T, C, H, W] tensor on GPU/CPU
+        keypoint_detector: Loaded Keypoint R-CNN model
+        
+    Returns:
+        results: List of (keypoints, scores) or None.
+                 keypoints format: Tensor [num_keypoints, 3] (x, y, confidence)
+    """
+    results = []
+    batch_size = 4
+    keypoint_detector.eval()
+        
+    with torch.no_grad():
+        for i in range(0, len(video_tensor), batch_size):
+            batch = video_tensor[i : i + batch_size]
+            preds = keypoint_detector(batch)
+            for pred in preds:
+                valid = (pred['labels'] == 1) & (pred['scores'] > 0.7)
+                if valid.any():
+                    best_idx = torch.argmax(pred['scores'][valid])
+                    # keypoints: [K, 3]
+                    keypoints = pred['keypoints'][valid][best_idx].cpu()
+                    score = pred['scores'][valid][best_idx].cpu()
+                    results.append((keypoints, score))
                 else:
                     results.append(None)
     return results

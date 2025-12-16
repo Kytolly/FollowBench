@@ -23,7 +23,6 @@ class AppearanceConsistencyEvaluator(DimensionEvaluator):
         global_cache = kwargs.get('global_cache')
         
         # 准备参考图 Embedding
-        self.prepare()
         ref_emb: Tensor = image_kit.prepare_ref_embedding(self.dinov2, self.dino_transform, pillow_ref)
         ref_emb.to(self.device)
         

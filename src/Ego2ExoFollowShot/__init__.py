@@ -125,6 +125,7 @@ class Ego2ExoFollowShotBench():
                 dimension_module = importlib.import_module(f'dimension.{DIMENSION_MODULE_MAP[dimension]}')
                 evaluate_class = getattr(dimension_module, f'{dimension}Evaluator')
                 evaluator: DimensionEvaluator = evaluate_class(self.device)
+                self.prepare()
                 
                 # compute loop
                 for rpath_gen, info in annotation:

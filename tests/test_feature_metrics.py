@@ -50,6 +50,7 @@ class TestFeatureMetrics(unittest.TestCase):
         mock_prep_emb.return_value = torch.randn(1, 768) # Dummy embedding
 
         evaluator = AppearanceConsistencyEvaluator(self.device)
+        evaluator.prepare()
         evaluator.det = MagicMock() # Mock internal detector
 
         # 1. 运行 (触发检测)
@@ -91,6 +92,7 @@ class TestFeatureMetrics(unittest.TestCase):
         mock_calc_bsc.return_value = 0.75
         
         evaluator = BackgroundSemanticConsistencyEvaluator(self.device)
+        evaluator.prepare()
         evaluator.det = MagicMock()
 
         # 预先填充缓存 (模拟 AC 或 CCE 已经跑过)

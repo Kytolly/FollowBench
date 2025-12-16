@@ -3,10 +3,26 @@ import numpy as np
 import torch
 from torch import Tensor
 import torch.nn.functional as F
+from torchvision.ops import roi_align
 from torchvision.transforms.functional import to_pil_image
 
 from utils.math import p_corr
-from utils.video_kit import get_traj
+from utils.video_kit import get_traj, compute_flow
+from . import metric
+
+def AestheticQuality(video_gen: Tensor, aq_model, aq_transform, device):
+    """ 计算美学质量 (LAION-Aesthetics) """
+    T = video_gen.shape[0]
+    scores = []
+    from torchvision.transforms.functional import to_pil_image
+    
+    with torch.no_grad():
+        for i in range(T):
+            img_pil = to_pil_image(video_gen[i].cpu())
+            input_tensor = aq_transform(img_pil).unsqueeze(0).to(device)
+            score = aq_model(input_tensor)
+            scores.append(score.item())
+    return np.mean(scores)
 
 def AppearanceConsistency(
     ref_emb,
@@ -128,6 +144,74 @@ def DynamicDegree(gen_flows: Tensor):
     dd = flow_mags.mean().item()
     return dd
 
+def FrechetVideoDistance(feat_gen: np.ndarray, feat_gt: np.ndarray):
+    """ 计算 FVD (假设输入已经是 numpy feature array) """
+    from scipy.linalg import sqrtm
+    
+    mu1, sigma1 = np.mean(feat_gen, axis=0), np.cov(feat_gen, rowvar=False)
+    mu2, sigma2 = np.mean(feat_gt, axis=0), np.cov(feat_gt, rowvar=False)
+    
+    diff = mu1 - mu2
+    covmean = sqrtm(sigma1.dot(sigma2))
+    if np.iscomplexobj(covmean):
+        covmean = covmean.real 
+
+    fvd_score = np.dot(diff, diff) + np.trace(sigma1 + sigma2 - 2.0 * covmean)
+    return fvd_score.item()
+
+def HumanActionAlignment(gen_results, gt_results, H, W):
+    """
+    计算人体动作对齐度 (HAA)
+    使用归一化后的平均关键点位置误差 (MPJPE)。
+    
+    Args:
+        gen_results: List of (keypoints, scores)
+        gt_results: List of (keypoints, scores)
+        H (int): 图像高度
+        W (int): 图像宽度
+    """
+    min_len = min(len(gen_results), len(gt_results))
+    if min_len < 1: return 1.0
+
+    frame_errors = []
+    img_diag = np.sqrt(H**2 + W**2) + 1e-6
+    
+    for i in range(min_len):
+        kp_gen, _ = gen_results[i] if gen_results[i] is not None else (None, None)
+        kp_gt, _ = gt_results[i] if gt_results[i] is not None else (None, None)
+        
+        if kp_gen is None or kp_gt is None:
+            frame_errors.append(1.0) # 惩罚
+            continue
+            
+        if kp_gen.shape != kp_gt.shape:
+            frame_errors.append(1.0)
+            continue
+            
+        pos_gen = kp_gen[:, :2] 
+        pos_gt = kp_gt[:, :2] 
+
+        # 计算欧氏距离
+        joint_dists = torch.norm(pos_gen - pos_gt, dim=1) 
+        
+        # 仅考虑有效关节 (Confidence > 0.5)
+        conf_gen = kp_gen[:, 2] > 0.5
+        conf_gt = kp_gt[:, 2] > 0.5
+        valid_joints = conf_gen & conf_gt
+
+        if valid_joints.sum() == 0:
+            frame_errors.append(1.0)
+            continue
+
+        # 计算该帧平均误差
+        mean_error_px = joint_dists[valid_joints].mean().item()
+        
+        # 归一化误差
+        normalized_error = min(mean_error_px / img_diag, 1.0)
+        frame_errors.append(normalized_error)
+        
+    return np.mean(frame_errors) if frame_errors else 1.0
+
 def MotionSmoothness(gen_flows: Tensor):
     '''计算运动平滑性 光流场在时间上的变化率'''
     # gen_flows: [T-1, 2, H, W]
@@ -202,3 +286,48 @@ def ViewpointValidity(detection_results):
     if not detection_results: return 0.0
     detected = sum(1 for res in detection_results if res is not None)
     return detected / len(detection_results)
+
+def calculate_metrics_based_flow_model(
+    gen_frames: Tensor,
+    gt_frames=None,
+    metrics_to_compute=None,
+    flow_model=None,
+    device=None):
+    """基于预加载的 RAFT 模型计算所有基于光流的指标 TF, MS, DD, OFC
+    Args:
+        gen_frames: 生成视频 Tensor [T, C, H, W] (0-1)
+        gt_frames:  GT视频 Tensor [T, C, H, W] (0-1)
+        如果提供，则计算 OFC。
+    """
+    if device is None: device = gen_frames.device
+    assert flow_model is not None 
+
+    # 计算生成视频光流
+    gen_norm = (gen_frames * 2.0) - 1.0
+    gen_flows = compute_flow(gen_norm, flow_model) # [T-1, 2, H, W]
+    if gen_flows is None:
+        return {'tf': 0.0, 'ms': 0.0, 'dd': 0.0, 'ofc': 0.0}
+    
+    results = {}
+    # --- Dynamic Degree (DD) ---
+    if 'dd' in metrics_to_compute:
+        results['dd'] = metric.DynamicDegree(gen_flows)
+    
+    # --- Motion Smoothness (MS) ---
+    if 'ms' in metrics_to_compute:
+        results['ms'] = metric.MotionSmoothness(gen_flows)
+        
+    # --- Temporal Flickering (TF) ---
+    if 'tf' in metrics_to_compute:
+        results['tf'] = metric.TemporalFlickering(gen_frames, gen_flows, device)
+
+    # --- Optical Flow Correlation --- 
+    if 'ofc' in metrics_to_compute and gt_frames is not None:
+        if len(gt_frames) >= 2:
+            gt_norm = (gt_frames * 2.0) - 1.0
+            gt_flows = compute_flow(gt_norm, flow_model)
+            results['ofc'] = metric.OpticalFlowCorrelation(gen_flows, gt_flows, device)
+        else:
+            results['ofc'] = 0.0
+
+    return results
