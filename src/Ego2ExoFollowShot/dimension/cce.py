@@ -3,7 +3,7 @@ from torchvision.models.detection import fasterrcnn_resnet50_fpn, FasterRCNN_Res
 
 from . import DimensionEvaluator
 from .metric import CameraCenteringError
-from utils.pretrain import get_detection_results
+import utils.pretrain
 
 class CameraCenteringErrorEvaluator(DimensionEvaluator):
     def prepare(self):
@@ -21,7 +21,7 @@ class CameraCenteringErrorEvaluator(DimensionEvaluator):
             detections = global_cache[cache_key]
         else:# cache not hits
             self.prepare()
-            detections = get_detection_results(video_gen, self.model)
+            detections = utils.pretrain.get_detection_results(video_gen, self.model)
             if global_cache is not None:
                 global_cache[cache_key] = detections
         
