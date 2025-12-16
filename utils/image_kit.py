@@ -3,6 +3,18 @@ import torch.nn.functional as F
 from torchvision import transforms
 from PIL import Image
 
+def load_image_to_gpu(image_path, device='cuda', target_size=None):
+    """读取图片并直接转换为 Tensor [C, H, W]"""
+    try:
+        img = Image.open(image_path).convert('RGB')
+        if target_size is not None:
+            img = img.resize(target_size, Image.BILINEAR)
+        tensor = transforms.ToTensor()(img).to(device)
+        return tensor
+    except Exception as e:
+        print(f"Error loading image {image_path}: {e}")
+        return None
+
 def prepare_ref_embedding(dinov2_model, dino_transform, ref_img):
     """
     预计算参考图的 Embedding

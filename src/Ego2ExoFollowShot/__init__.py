@@ -5,8 +5,9 @@ import logging
 import importlib
 import torch
 
-from dimension import DimensionEvaluator
+from .dimension import DimensionEvaluator
 from utils.video_kit import load_video_to_gpu
+from utils.image_kit import load_image_to_gpu
 from utils.gpu import clear_gpu_memory
 
 DIMENSION_NAMES = [
@@ -29,7 +30,6 @@ DIMENSION_MODULE_MAP = {}
 for dn, dnis in zip(DIMENSION_NAMES, DIMENSION_NAMES_IN_SHORT):
     DIMENSION_MODULE_MAP[dn] = dnis
     
-
 class Ego2ExoFollowShotBench():
     def __init__(self,
                  device,
@@ -48,7 +48,7 @@ class Ego2ExoFollowShotBench():
             'Ref': {} # 参考图片
         }
     
-    def _caching(self, matching_map, path_generated_video, target_size):
+    def _caching(self, matching_map: dict, path_generated_video, target_size):
         logging.info("caching all videos to GPU...")
         total = len(matching_map)
         for idx, (rpath_gen, info) in enumerate(matching_map.items()):
@@ -63,6 +63,11 @@ class Ego2ExoFollowShotBench():
             path_gt = self.path_assets_root / info['Exogt']
             if info['Exogt'] not in self.cache['Exogt']:
                 self.cache['Exogt'][info['Exogt']] = load_video_to_gpu(path_gt, self.device, target_size)
+            
+            path_ref = self.path_assets_root / info['Ref']
+            if info['Ref'] not in self.cache['Ref']:
+                self.cache['Ref'][info['Ref']] = load_image_to_gpu(path_ref, self.device)
+                
             if (idx + 1) % 5 == 0:
                 logging.info(f"Loaded {idx + 1}/{total} video pairs to GPU.")
         logging.info("All videos cached in VRAM.")
@@ -97,21 +102,35 @@ class Ego2ExoFollowShotBench():
         results= {}
         path_output = Path(path_output)
         for dimension in dimension_list:
+            # FVD 特殊处理：跳过单视频循环，直接算全集
+            if dimension == 'FrechetVideoDistance':
+                logging.info("Calculating FVD for the entire dataset...")
+                from dimension.fvd import FrechetVideoDistanceEvaluator
+                fvd_eval = FrechetVideoDistanceEvaluator(self.device)
+                # 假设 matching_map 里第一个元素的 GT 目录代表了整个 GT 目录
+                first_info = list(matching_map.values())[0]
+                path_gt_dir = (self.path_assets_root / first_info['Exogt']).parent
+                score = fvd_eval.compute_dataset(path_generated_video, path_gt_dir)
+                results['FVD'] = score
+                continue
+            
             try:
+                # 动态加载模块
                 dimension_module = importlib.import_module(f'dimension.{DIMENSION_MODULE_MAP[dimension]}')
                 evaluate_class = getattr(dimension_module, f'{dimension}Evaluator')
                 evaluator: DimensionEvaluator = evaluate_class(self.device)
                 evaluator.prepare()
+                
                 for rpath_gen, info in matching_map:
-                    tensor_gen = self.cache['gen'][rpath_gen]
-                    tensor_ego = self.cache['ego'][info['Ego']]
-                    tensor_gt  = self.cache['gt'][info['Exogt']]
-                    tensor_ref   = self.cache['gt'][info['ref']]
+                    tensor_gen = self.cache['Gen'][rpath_gen]
+                    tensor_ego = self.cache['Ego'][info['Ego']]
+                    tensor_gt  = self.cache['Exogt'][info['Exogt']]
+                    tensor_ref = self.cache['Ref'][info['Ref']]
                     
                     res = evaluator.compute(
-                        tensor_gen, tensor_ego, tensor_gt, tensor_ref,
-                        video_id=rpath_gen,
-                        global_cache=self.cache)
+                            tensor_gen, tensor_ego, tensor_gt, tensor_ref,
+                            video_id=rpath_gen,global_cache=self.cache
+                        )
                     if rpath_gen not in results: results[rpath_gen] = {}
                     results[rpath_gen][dimension] = res
                     logging.info(f'A new result of {rpath_gen} in {dimension} is {results[rpath_gen][dimension]}!')

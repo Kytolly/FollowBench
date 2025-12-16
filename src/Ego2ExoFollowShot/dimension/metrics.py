@@ -5,12 +5,14 @@ import logging
 import re
 
 import torch
+from torch import Tensor
 import torch.nn.functional as F
 from torchvision.models.optical_flow import raft_small, Raft_Small_Weights
 import torchvision.transforms.functional as TF
 from torchvision.ops import roi_align
 
 from utils import *
+import metric
 
 def FrechetVideoDistance(
     repo_path,
@@ -419,3 +421,48 @@ def HumanActionAlignment(gen_frames, ref_frames, model, device):
 
 def TrajectoryAlignment(frames, device):
     pass
+
+def calculate_all_flow_metrics(
+    gen_frames: Tensor, 
+    gt_frames=None, 
+    flow_model=None, 
+    device=None):
+    """基于预加载的 RAFT 模型计算所有基于光流的指标 TF, MS, DD, OFC
+    Args:
+        gen_frames: 生成视频 Tensor [T, C, H, W] (0-1)
+        gt_frames:  GT视频 Tensor [T, C, H, W] (0-1)。
+        如果提供，则计算 OFC。
+    """    
+    # 预处理 (0~1 -> -1~1)
+    if device is None: device = gen_frames.device
+    gen_norm = (gen_frames * 2.0) - 1.0
+    
+    # 准备模型
+    if flow_model == None: 
+        flow_model=raft_small(
+                    weights=Raft_Small_Weights.DEFAULT, 
+                    progress=False)
+        flow_model.to(device).eval()
+
+    # 计算生成视频光流
+    gen_flows = compute_flow(gen_norm, flow_model) # [T-1, 2, H, W]
+    if gen_flows is None:
+        return {'tf': 0.0, 'ms': 0.0, 'dd': 0.0, 'ofc': 0.0}
+    
+    # --- Dynamic Degree ---
+    dd = metric.DynamicDegree(gen_flows)
+    
+    # --- Motion Smoothness ---
+    ms = metric.MotionSmoothness(gen_flows)
+        
+    # --- Temporal Flickering ---
+    tf = metric.TemporalFlickering(gen_frames, gen_flows, device)
+
+    # --- Optical Flow Correlation ---
+    ofc = None
+    if gt_frames is not None and len(gt_frames) >= 2:
+        gt_norm = (gt_frames * 2.0) - 1.0
+        gt_flows = compute_flow(gt_norm, flow_model)
+        ofc = metric.OpticalFlowCorrelation(gen_flows, gt_flows, device)
+
+    return {'tf': tf, 'ms': ms, 'dd': dd, 'ofc': ofc}

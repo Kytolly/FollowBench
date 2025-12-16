@@ -89,3 +89,22 @@ def load_video_to_gpu(video_path, device='cuda', target_size=None):
     tensor = tensor.permute(0, 3, 1, 2).float() / 255.0
     
     return tensor
+
+def tensor_to_numpy(tensor):
+    """
+    GPU Tensor [T, C, H, W] (0-1) -> CPU Numpy List of [H, W, C] (0-255)
+    """
+    if tensor is None: return []
+    # [T, C, H, W] -> [T, H, W, C]
+    arr = tensor.permute(0, 2, 3, 1).cpu().numpy()
+    # 0-1 -> 0-255
+    return [(frame * 255).astype(np.uint8) for frame in arr]
+
+def compute_flow(frames, flow_model):
+    """计算光流"""
+    if len(frames) < 2: return None
+    img1 = frames[:-1]
+    img2 = frames[1:]
+    with torch.no_grad():
+        flows = flow_model(img1, img2)[-1] # [T-1, 2, H, W]
+    return flows

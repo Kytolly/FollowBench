@@ -1,6 +1,5 @@
-# src/Ego2ExoFollowShot/dimension/tf.py
 from . import DimensionEvaluator
-from Ego2ExoFollowShot.dimension.metrics import calculate_temporal_consistency
+from dimension.metrics import calculate_all_flow_metrics
 from torchvision.models.optical_flow import raft_small, Raft_Small_Weights
 
 class TemporalFlickeringEvaluator(DimensionEvaluator):
@@ -15,7 +14,11 @@ class TemporalFlickeringEvaluator(DimensionEvaluator):
             return global_cache[cache_key]['tf'] # 直接返回 Flickering
         
         # 缓存未命中
-        tf, ms, dd = calculate_temporal_consistency(video_gen, flow_model=self.flow_model, device=self.device)
+        metrics = calculate_all_flow_metrics(
+            video_gen, 
+            gt_frames=video_gt, # 传入 GT，激活 OFC 计算
+            flow_model=self.flow_model
+        )
         if global_cache is not None and video_id is not None:
             global_cache[cache_key] = {
                 'tf': tf,
