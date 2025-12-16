@@ -25,12 +25,8 @@ class TemporalFlickeringEvaluator(DimensionEvaluator):
                 gen_frames=tensor_gen, 
                 gt_frames=tensor_gt,
                 metrics_to_compute=metrics_to_compute,
-                flow_model=self.flow_model, 
+                flow_model=self.model, 
                 device=self.device)
         if global_cache is not None and video_id is not None:
             global_cache[cache_key] = metrics
         return metrics['tf']
-
-    def clear(self):
-        del self.flow_model
-        super().clear()

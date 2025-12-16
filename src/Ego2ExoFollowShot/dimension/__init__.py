@@ -3,9 +3,10 @@ import utils.gpu
 class DimensionEvaluator():
     def __init__(self, device):
         self.device = device
+        self.model = None
         
     def prepare(self):
-        self.model = None
+        pass
     
     def compute(self, **kwargs):
         raise NotImplementedError

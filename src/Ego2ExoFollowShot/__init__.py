@@ -121,12 +121,13 @@ class Ego2ExoFollowShotBench():
                 continue
             
             try:
-                # 动态加载模块
+                # dynamic load modules
                 dimension_module = importlib.import_module(f'dimension.{DIMENSION_MODULE_MAP[dimension]}')
                 evaluate_class = getattr(dimension_module, f'{dimension}Evaluator')
                 evaluator: DimensionEvaluator = evaluate_class(self.device)
                 evaluator.prepare()
                 
+                # compute loop
                 for rpath_gen, info in annotation:
                     compute_kwargs = {
                         'tensor_gen': self.cache['Gen'][rpath_gen],

@@ -4,9 +4,8 @@ from . import DimensionEvaluator
 from .metrics import calculate_all_flow_metrics
 
 class DynamicDegreeEvaluator(DimensionEvaluator):
-    def prepare(self, device='cuda'):
-        self.device = device
-        self.model = raft_small(weights=Raft_Small_Weights.DEFAULT).to(device).eval()
+    def prepare(self):
+        self.model = raft_small(weights=Raft_Small_Weights.DEFAULT).to(self.device).eval()
 
     def compute(self, **kwargs):
         # parse kwargs
@@ -26,12 +25,8 @@ class DynamicDegreeEvaluator(DimensionEvaluator):
                 gen_frames=tensor_gen, 
                 gt_frames=tensor_gt,
                 metrics_to_compute=metrics_to_compute,
-                flow_model=self.flow_model, 
+                flow_model=self.model, 
                 device=self.device)
         if global_cache is not None and video_id is not None:
             global_cache[cache_key] = metrics
         return metrics['dd']
-
-    def clear(self):
-        del self.flow_model
-        super().clear()

@@ -1,7 +1,7 @@
 import torch
 from torch import Tensor
 import torch.nn.functional as F
-import utils
+from utils.math import p_corr
 
 def DynamicDegree(gen_flows: Tensor):
     '''计算视频的动态程度 (from vbench)'''
@@ -54,7 +54,7 @@ def OpticalFlowCorrelation(gen_flows: Tensor, gt_flows: Tensor, device):
     g_motion = g_flow.mean(dim=[2, 3]) # [t, 2]
     t_motion = t_flow.mean(dim=[2, 3]) # [t, 2]
     
-    corr_x = utils.math.p_corr(g_motion[:, 0], t_motion[:, 0], device)
-    corr_y = utils.math.p_corr(g_motion[:, 1], t_motion[:, 1], device)
+    corr_x = p_corr(g_motion[:, 0], t_motion[:, 0], device)
+    corr_y = p_corr(g_motion[:, 1], t_motion[:, 1], device)
     ofc = ((corr_x + corr_y) / 2.0).item()
     return ofc
