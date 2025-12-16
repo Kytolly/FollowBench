@@ -1,31 +1,36 @@
-from . import DimensionEvaluator
-from dimension.metrics import calculate_all_flow_metrics
 from torchvision.models.optical_flow import raft_small, Raft_Small_Weights
+
+from . import DimensionEvaluator
+from .metrics import calculate_all_flow_metrics
 
 class TemporalFlickeringEvaluator(DimensionEvaluator):
     def prepare(self, device='cuda'):
         self.device = device
         self.flow_model = raft_small(weights=Raft_Small_Weights.DEFAULT).to(device).eval()
 
-    def compute(self, video_gen, video_ego, video_gt, path_ref, video_id=None, global_cache=None):
-        # 缓存命中
+    def compute(self, **kwargs):
+        # parse kwargs
+        tensor_gen = kwargs.get('tensor_gen')
+        tensor_gt = kwargs.get('tensor_gt')
+        video_id = kwargs.get('video_id')
+        global_cache = kwargs.get('global_cache')
+        metrics_to_compute = kwargs.get('metrics_to_compute', {'tf'}) # 默认只算自己
+        
+        # cache hits
         cache_key = f"temporal_consistency_{video_id}"
         if global_cache is not None and cache_key in global_cache:
-            return global_cache[cache_key]['tf'] # 直接返回 Flickering
+            return global_cache[cache_key]['tf']
         
-        # 缓存未命中
+        # cache not hits
         metrics = calculate_all_flow_metrics(
-            video_gen, 
-            gt_frames=video_gt, # 传入 GT，激活 OFC 计算
-            flow_model=self.flow_model
-        )
+                gen_frames=tensor_gen, 
+                gt_frames=tensor_gt,
+                metrics_to_compute=metrics_to_compute,
+                flow_model=self.flow_model, 
+                device=self.device)
         if global_cache is not None and video_id is not None:
-            global_cache[cache_key] = {
-                'tf': tf,
-                'ms': ms,
-                'dd': dd
-            }
-        return tf
+            global_cache[cache_key] = metrics
+        return metrics['tf']
 
     def clear(self):
         del self.flow_model

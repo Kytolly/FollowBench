@@ -1,28 +1,13 @@
-from .fvd import FrechetVideoDistanceEvaluator
-from .aq import AestheticQualityEvaluator
-from .iq import ImagingQualityEvaluator
-from .tf import TemporalFlickeringEvaluator
-from .ms import MotionSmoothnessEvaluator
-from .dd import DynamicDegreeEvaluator
-from .cce import CameraCenteringErrorEvaluator
-from .ac import AppearanceConsistencyEvaluator
-from .vv import ViewpointValidityEvaluator
-from .bsc import BackgroundSemanticConsistencyEvaluator
-from .haa import HumanActionAlignmentEvaluator
-from .ofc import OpticalFlowCorrelationEvaluator
-from .ta import TrajectoryAlignmentEvaluator
-
 import utils.gpu
 
 class DimensionEvaluator():
     def __init__(self, device):
         self.device = device
-        self.model = None
         
     def prepare(self):
-        pass
+        self.model = None
     
-    def compute(self, video_gen, video_ego, video_gt, path_ref, video_id=None, global_cache=None):
+    def compute(self, **kwargs):
         raise NotImplementedError
     
     def clear(self):

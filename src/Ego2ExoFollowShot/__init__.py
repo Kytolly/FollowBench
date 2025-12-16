@@ -48,10 +48,10 @@ class Ego2ExoFollowShotBench():
             'Ref': {} # 参考图片
         }
     
-    def _caching(self, matching_map: dict, path_generated_video, target_size):
+    def _caching(self, annotation: dict, path_generated_video, target_size):
         logging.info("caching all videos to GPU...")
-        total = len(matching_map)
-        for idx, (rpath_gen, info) in enumerate(matching_map.items()):
+        total = len(annotation)
+        for idx, (rpath_gen, info) in enumerate(annotation.items()):
             path_gen = path_generated_video / rpath_gen
             if rpath_gen not in self.cache['Gen']:
                 self.cache['Gen'][rpath_gen] = load_video_to_gpu(path_gen, self.device, target_size)
@@ -74,30 +74,36 @@ class Ego2ExoFollowShotBench():
     
     def evaluate(self,
                  path_generated_video, # 用户的生成结果目录
-                 path_matching_map_json, # 相对 assets_root 路径
+                 path_annotation_json, # 相对 assets_root 路径
                  path_output, # 保持 json 格式
-                 dimension_list=None,
-                 target_size=(224, 224),
-                 *args,
-                 **kwargs):
+                 dimension_list: list[str]=None,
+                 target_size=(224, 224),):
         # 路径检查
         path_generated_video = Path(path_generated_video)
         if not path_generated_video.exists():
             raise FileNotFoundError(f"Path not found at {path_generated_video}.")
         
-        path_matching_map_json = Path(path_matching_map_json)
-        with open(path_matching_map_json, 'r') as f: 
-            matching_map = json.load(f)
+        path_annotation_json = Path(path_annotation_json)
+        with open(path_annotation_json, 'r') as f: 
+            annotation = json.load(f)
         f.close()
         
         # 缓存
         try:
-            self._caching(matching_map, path_generated_video, target_size)
+            self._caching(annotation, path_generated_video, target_size)
         except torch.cuda.OutOfMemoryError:
             logging.error("OOM during pre-loading! Try reducing video resolution or batch size.")
             torch.cuda.empty_cache()
             return
         
+        # 解析本次运行需要计算哪些指标
+        metrics_to_compute = set()
+        for d in dimension_list:
+            if d in DIMENSION_MODULE_MAP: # 如果是全称，转短名
+                metrics_to_compute.add(DIMENSION_MODULE_MAP[d])
+            else: # 已经是短名
+                metrics_to_compute.add(d.lower())
+                
         # 计算阶段
         results= {}
         path_output = Path(path_output)
@@ -107,8 +113,8 @@ class Ego2ExoFollowShotBench():
                 logging.info("Calculating FVD for the entire dataset...")
                 from dimension.fvd import FrechetVideoDistanceEvaluator
                 fvd_eval = FrechetVideoDistanceEvaluator(self.device)
-                # 假设 matching_map 里第一个元素的 GT 目录代表了整个 GT 目录
-                first_info = list(matching_map.values())[0]
+                # 假设 annotation 里第一个元素的 GT 目录代表了整个 GT 目录
+                first_info = list(annotation.values())[0]
                 path_gt_dir = (self.path_assets_root / first_info['Exogt']).parent
                 score = fvd_eval.compute_dataset(path_generated_video, path_gt_dir)
                 results['FVD'] = score
@@ -121,16 +127,17 @@ class Ego2ExoFollowShotBench():
                 evaluator: DimensionEvaluator = evaluate_class(self.device)
                 evaluator.prepare()
                 
-                for rpath_gen, info in matching_map:
-                    tensor_gen = self.cache['Gen'][rpath_gen]
-                    tensor_ego = self.cache['Ego'][info['Ego']]
-                    tensor_gt  = self.cache['Exogt'][info['Exogt']]
-                    tensor_ref = self.cache['Ref'][info['Ref']]
-                    
-                    res = evaluator.compute(
-                            tensor_gen, tensor_ego, tensor_gt, tensor_ref,
-                            video_id=rpath_gen,global_cache=self.cache
-                        )
+                for rpath_gen, info in annotation:
+                    compute_kwargs = {
+                        'tensor_gen': self.cache['Gen'][rpath_gen],
+                        'tensor_ego': self.cache['Ego'][info['Ego']],
+                        'tensor_gt': self.cache['Exogt'][info['Exogt']],
+                        'tensor_ref': self.cache['Ref'][info['Ref']],
+                        'video_id': rpath_gen,
+                        'global_cache': self.cache,
+                        'metrics_to_compute': metrics_to_compute
+                    }
+                    res = evaluator.compute(**compute_kwargs)
                     if rpath_gen not in results: results[rpath_gen] = {}
                     results[rpath_gen][dimension] = res
                     logging.info(f'A new result of {rpath_gen} in {dimension} is {results[rpath_gen][dimension]}!')
