@@ -1,4 +1,4 @@
-import os
+from PIL import Image
 from pathlib import Path
 import json
 import logging
@@ -66,7 +66,7 @@ class Ego2ExoFollowShotBench():
             
             path_ref = self.path_assets_root / info['Ref']
             if info['Ref'] not in self.cache['Ref']:
-                self.cache['Ref'][info['Ref']] = load_image_to_gpu(path_ref, self.device)
+                self.cache['Ref'][info['Ref']] = Image.open(path_ref).convert('RGB')
                 
             if (idx + 1) % 5 == 0:
                 logging.info(f"Loaded {idx + 1}/{total} video pairs to GPU.")
@@ -132,7 +132,7 @@ class Ego2ExoFollowShotBench():
                         'tensor_gen': self.cache['Gen'][rpath_gen],
                         'tensor_ego': self.cache['Ego'][info['Ego']],
                         'tensor_gt': self.cache['Exogt'][info['Exogt']],
-                        'tensor_ref': self.cache['Ref'][info['Ref']],
+                        'pillow_ref': self.cache['Ref'][info['Ref']],
                         'video_id': rpath_gen,
                         'global_cache': self.cache,
                         'metrics_to_compute': metrics_to_compute

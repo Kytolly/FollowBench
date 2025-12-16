@@ -3,9 +3,105 @@ import numpy as np
 import torch
 from torch import Tensor
 import torch.nn.functional as F
+from torchvision.transforms.functional import to_pil_image
 
 from utils.math import p_corr
 from utils.video_kit import get_traj
+
+def AppearanceConsistency(
+    ref_emb,
+    video_gen: Tensor,
+    dinov2, 
+    dino_transform, 
+    detection_results,
+    device):
+    """
+    计算外观一致性 (AC)
+    Args:
+        dinov2: Loaded DINOv2 model
+        dino_transform: Preprocessing transform for DINOv2
+        detection_results: List of (box, score) from get_detection_results
+        ref_emb: Embedding of reference image [1, D]
+        video_gen: Generated video tensor [T, 3, H, W] (0-1 float)
+    """
+    scores = []
+    T = video_gen.shape[0]
+    H, W = video_gen.shape[2], video_gen.shape[3]
+
+    for i in range(T):
+        res = detection_results[i]
+        if res is None:
+            scores.append(0.0) # 惩罚没有检测到人的结果
+            continue
+        
+        box, _ = res
+        x1, y1, x2, y2 = map(int, box.tolist())
+        x1, y1 = max(0, x1), max(0, y1); x2, y2 = min(W, x2), min(H, y2) # 边界保护
+        if x2 - x1 < 10 or y2 - y1 < 10:
+            scores.append(0.0) # 框太小则忽略
+            continue
+
+        # Crop 人物区域提取特征
+        person_crop = video_gen[i, :, y1:y2, x1:x2] # [3, h, w]
+        img_pil = to_pil_image(person_crop.cpu()) # 转 PIL -> Transform -> Tensor -> GPU
+        input_tensor = dino_transform(img_pil).unsqueeze(0).to(device)
+        with torch.no_grad():
+            curr_emb = dinov2(input_tensor) # [1, D]
+
+        sim = F.cosine_similarity(curr_emb, ref_emb) # 计算余弦相似度
+        scores.append(sim.item())
+
+    return sum(scores) / len(scores) if scores else 0.0
+
+def BackgroundSemanticConsistency(
+    ref_img_pil,
+    video_gen,
+    clip_model,
+    clip_proc,
+    detection_results,
+    device):
+    """
+    计算背景语义一致性
+    Args:
+        clip_model: Loaded CLIP model
+        clip_proc: CLIP Processor
+        detection_results: List of (box, score)
+        ref_img_pil: Reference image (PIL)
+        video_gen: Generated video tensor [T, 3, H, W]
+    """
+    scores = []
+    T = video_gen.shape[0]
+    H, W = video_gen.shape[2], video_gen.shape[3]
+    
+    # 预计算参考图特征
+    inputs_ref = clip_proc(images=ref_img_pil, return_tensors="pt").to(device)
+    with torch.no_grad():
+        ref_emb = clip_model.get_image_features(**inputs_ref)
+    
+    for i in range(T):
+        frame_tensor = video_gen[i].clone() # [3, H, W]
+        
+        # Mask 掉人物
+        res = detection_results[i]
+        if res is not None:
+            box, _ = res
+            x1, y1, x2, y2 = map(int, box.tolist())
+            x1, y1 = max(0, x1), max(0, y1)
+            x2, y2 = min(W, x2), min(H, y2)
+            frame_tensor[:, y1:y2, x1:x2] = 0.0 # Black out
+            
+        # 提取特征
+        img_pil = to_pil_image(frame_tensor.cpu())
+        inputs = clip_proc(images=img_pil, return_tensors="pt").to(device)
+        
+        with torch.no_grad():
+            curr_emb = clip_model.get_image_features(**inputs)
+            
+        # 计算相似度
+        sim = F.cosine_similarity(curr_emb, ref_emb)
+        scores.append(sim.item())
+        
+    return sum(scores) / len(scores) if scores else 0.0
 
 def CameraCenteringError(detection_results, H, W):
     """计算相机中心误差 衡量生成的主角是否位于画面中心 符合第三人称跟随视角的构图习惯"""
