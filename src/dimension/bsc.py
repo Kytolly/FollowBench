@@ -5,12 +5,11 @@ from torchvision.models.detection import fasterrcnn_resnet50_fpn, FasterRCNN_Res
 
 from . import DimensionEvaluator
 from .metric import BackgroundSemanticConsistency
-from src.utils.pretrain import get_detection_results, load_clip_model, load_clip_processor, load_faster_rcnn
+from src.utils.pretrain import get_detection_results, load_clip, load_faster_rcnn
 
 class BackgroundSemanticConsistencyEvaluator(DimensionEvaluator):
     def prepare(self):
-        self.clip = load_clip_model(self.device)
-        self.proc = load_clip_processor(self.device)
+        self.clip, self.proc = load_clip(self.device)
         self.det = load_faster_rcnn(self.device)
         super().prepare()
 

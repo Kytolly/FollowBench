@@ -26,10 +26,10 @@ def clear_models_cache():
 
 def load_dinov2(device):
     def _loader():
-        model = torch.hub.load('facebookresearch/dinov2', 'dinov2_vits14')
-        model.eval()
-        model.to(device)
+        model = torch.hub.load('facebookresearch/dinov2', 'dinov2_vits14').eval().to(device)
         transform = transforms.Compose([
+            transforms.Resize((224, 224), interpolation=transforms.InterpolationMode.BICUBIC),
+            transforms.ToTensor(),
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
         ])
         return model, transform
@@ -88,25 +88,13 @@ def load_laion_aes_vit(device):
             return None
     return _get_cached_model(f"laion_aes_{device}", _loader)
 
-def load_clip_model(device):
+def load_clip(device):
     def _loader():
-        try:
-            clip = CLIPModel.from_pretrained("openai/clip-vit-base-patch32").to(device)
-            return clip
-        except Exception as e:
-            print(f"Failed to load CLIP: {e}")
-            return None
-    return _get_cached_model(f"clip_model_{device}", _loader)
-
-def load_clip_processor(device):
-    def _loader():
-        try:
-            proc = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32").to(device)
-            return proc
-        except Exception as e:
-            print(f"Failed to load CLIP: {e}")
-            return None
-    return _get_cached_model(f"clip_processor_{device}", _loader)
+        model_name = "openai/clip-vit-base-patch32"
+        model = CLIPModel.from_pretrained(model_name).to(device).eval()
+        proc = CLIPProcessor.from_pretrained(model_name)
+        return model, proc
+    return _get_cached_model(f"clip_{device}", _loader)
 
 def get_detection_results(video_tensor, detector, device=None):
     if device is None: device = video_tensor.device
