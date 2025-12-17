@@ -147,7 +147,7 @@ class Ego2ExoFollowShotBench():
                 logging.warning(f'UnImplemented dimension {dimension}!, {e}')
                 continue
             finally:
-                evaluator.clear()
+                # evaluator.clear()
                 self.cache = {
                     'Gen': {},
                     'Ego': {},

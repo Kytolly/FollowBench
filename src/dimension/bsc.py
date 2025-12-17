@@ -5,16 +5,14 @@ from torchvision.models.detection import fasterrcnn_resnet50_fpn, FasterRCNN_Res
 
 from . import DimensionEvaluator
 from .metric import BackgroundSemanticConsistency
-from src.utils.pretrain import get_detection_results
+from src.utils.pretrain import get_detection_results, load_clip_model, load_clip_processor, load_faster_rcnn
 
 class BackgroundSemanticConsistencyEvaluator(DimensionEvaluator):
     def prepare(self):
-        # 加载 CLIP
-        self.clip = CLIPModel.from_pretrained("openai/clip-vit-base-patch32").to(self.device)
-        self.proc = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
-        # 加载 Detector
-        self.det = fasterrcnn_resnet50_fpn(weights=FasterRCNN_ResNet50_FPN_Weights.DEFAULT).to(self.device)
-        self.det.eval()
+        self.clip = load_clip_model(self.device)
+        self.proc = load_clip_processor(self.device)
+        self.det = load_faster_rcnn(self.device)
+        super().prepare()
 
     def compute(self, **kwargs):
         # parse kwargs

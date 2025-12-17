@@ -2,10 +2,11 @@ from torchvision.models.optical_flow import raft_small, Raft_Small_Weights
 
 from . import DimensionEvaluator
 from .metric import calculate_metrics_based_flow_model
-
+from src.utils.pretrain import load_raft
 class TemporalFlickeringEvaluator(DimensionEvaluator):
     def prepare(self):
-        self.model = raft_small(weights=Raft_Small_Weights.DEFAULT).to(self.device).eval()
+        self.model = load_raft(self.device)
+        super().prepare()
 
     def compute(self, **kwargs):
         # parse kwargs

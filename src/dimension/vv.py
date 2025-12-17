@@ -1,13 +1,13 @@
 from torchvision.models.detection import fasterrcnn_resnet50_fpn, FasterRCNN_ResNet50_FPN_Weights
 
-from src.utils.pretrain import get_detection_results
+from src.utils.pretrain import get_detection_results, load_faster_rcnn
 from .metric import ViewpointValidity
 from . import DimensionEvaluator
 
 class ViewpointValidityEvaluator(DimensionEvaluator):
     def prepare(self):
-        self.model = fasterrcnn_resnet50_fpn(weights=FasterRCNN_ResNet50_FPN_Weights.DEFAULT).to(self.device).eval()
-
+        self.model = load_faster_rcnn(self.device)
+        super().prepare()
     def compute(self, **kwargs):
         # parse kwargs
         video_gen = kwargs.get('tensor_gen')

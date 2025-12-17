@@ -3,11 +3,12 @@ from torchvision.models.detection import fasterrcnn_resnet50_fpn, FasterRCNN_Res
 
 from . import DimensionEvaluator
 from .metric import CameraCenteringError
-from src.utils.pretrain import get_detection_results
+from src.utils.pretrain import get_detection_results, load_faster_rcnn
 
 class CameraCenteringErrorEvaluator(DimensionEvaluator):
     def prepare(self):
-        self.model = fasterrcnn_resnet50_fpn(weights=FasterRCNN_ResNet50_FPN_Weights.DEFAULT).to(self.device).eval()
+        self.model = load_faster_rcnn(self.device)
+        super().prepare()
 
     def compute(self, **kwargs):
         # parse kwargs

@@ -2,9 +2,11 @@ import pynvml
 import gc
 import torch
 
-def clear_gpu_memory(*args):
+def clear_gpu_memory(*args, **kwargs):
     '''强制清理显存'''
     for model in args:
+        del model
+    for model in kwargs.values():
         del model
     gc.collect()
     torch.cuda.empty_cache()

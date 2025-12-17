@@ -8,6 +8,7 @@ from .metric import FrechetVideoDistance
 class FrechetVideoDistanceEvaluator(DimensionEvaluator):
     def prepare(self):
         self.model = load_i3d(self.device)
+        super().prepare()
 
     def compute(self, **kwargs):
         video_gen = kwargs.get('tensor_gen')

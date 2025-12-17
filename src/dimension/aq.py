@@ -5,6 +5,7 @@ from .metric import AestheticQuality
 class AestheticQualityEvaluator(DimensionEvaluator):
     def prepare(self):
         self.model = load_laion_aes_vit(self.device)
+        super().prepare()
 
     def compute(self, **kwargs):
         video_gen = kwargs.get('tensor_gen')

@@ -1,4 +1,5 @@
 from ..utils import gpu
+import logging
 
 class DimensionEvaluator():
     def __init__(self, device):
@@ -6,7 +7,7 @@ class DimensionEvaluator():
         self.model = None
         
     def prepare(self):
-        pass
+        logging.info(f"{self.__class__.__name__} prepared!")
     
     def compute(self, **kwargs):
         raise NotImplementedError

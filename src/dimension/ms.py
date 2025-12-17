@@ -7,6 +7,7 @@ from src.utils.pretrain import load_raft
 class MotionSmoothnessEvaluator(DimensionEvaluator):
     def prepare(self):
         self.model = load_raft(self.device)
+        super().prepare()
 
     def compute(self, **kwargs):
         # parse kwargs

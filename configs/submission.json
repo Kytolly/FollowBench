@@ -1,0 +1,12 @@
+{
+    "meta": {
+        "team_name": "MyTeam",
+        "model_name": "EgoGen-V1",
+        "contact": "email@example.com"
+    },
+    "results": {
+        "1001": "videos/v1.mp4",
+        "1002": "videos/v2.mp4",
+        "1003": "videos/v3.mp4"
+    }
+}

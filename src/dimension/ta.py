@@ -8,6 +8,7 @@ from src.utils.pretrain import get_detection_results, load_faster_rcnn
 class TrajectoryAlignmentEvaluator(DimensionEvaluator):
     def prepare(self):
         self.det = load_faster_rcnn(self.device)
+        super().prepare()
 
     def compute(self, **kwargs):
         video_gen = kwargs.get('tensor_gen')

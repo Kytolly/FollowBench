@@ -5,6 +5,7 @@ from .metric import ImagingQuality
 class ImagingQualityEvaluator(DimensionEvaluator):
     def prepare(self):
         self.model = load_musiq(self.device)
+        super().prepare()
 
     def compute(self, **kwargs):
         video_gen = kwargs.get('tensor_gen')

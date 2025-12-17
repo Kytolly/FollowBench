@@ -12,6 +12,7 @@ class AppearanceConsistencyEvaluator(DimensionEvaluator):
     def prepare(self):
         self.dinov2, self.dino_transform = load_dinov2(self.device)
         self.det = load_faster_rcnn(self.device)
+        super().prepare()
 
     def compute(self, **kwargs):
         # parse kwargs

@@ -3,11 +3,12 @@ from torchvision.models.detection import keypointrcnn_resnet50_fpn, KeypointRCNN
 
 from . import DimensionEvaluator
 from .metric import HumanActionAlignment
-from src.utils.pretrain import get_keypoint_results
+from src.utils.pretrain import get_keypoint_results, load_keypoint_rcnn
 
 class HumanActionAlignmentEvaluator(DimensionEvaluator):
     def prepare(self):
-        self.model = keypointrcnn_resnet50_fpn(weights=KeypointRCNN_ResNet50_FPN_Weights.DEFAULT).to(self.device).eval()
+        self.model = load_keypoint_rcnn(self.device)
+        super().prepare()
 
     def compute(self, **kwargs):
         """
