@@ -2,15 +2,15 @@ from torchvision.models.optical_flow import raft_small, Raft_Small_Weights
 
 from . import DimensionEvaluator
 from .metric import calculate_metrics_based_flow_model
+from src.utils.pretrain import load_raft
 
 class MotionSmoothnessEvaluator(DimensionEvaluator):
     def prepare(self):
-        self.model = raft_small(weights=Raft_Small_Weights.DEFAULT).to(self.device).eval()
+        self.model = load_raft(self.device)
 
     def compute(self, **kwargs):
         # parse kwargs
         video_gen = kwargs.get('tensor_gen')
-        tensor_gt = kwargs.get('tensor_gt')
         video_id = kwargs.get('video_id')
         global_cache = kwargs.get('global_cache')
         metrics_to_compute = kwargs.get('metrics_to_compute', {'ms'}) # 默认只算自己

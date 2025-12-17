@@ -5,16 +5,13 @@ from torchvision.models.detection import fasterrcnn_resnet50_fpn, FasterRCNN_Res
 
 from . import DimensionEvaluator
 from .metric import AppearanceConsistency
-from src.utils.pretrain import load_dinov2, get_detection_results
+from src.utils.pretrain import load_dinov2, load_faster_rcnn, get_detection_results
 from src.utils.image_kit import prepare_ref_embedding
 
 class AppearanceConsistencyEvaluator(DimensionEvaluator):
     def prepare(self):
-        # 加载 DINOv2
         self.dinov2, self.dino_transform = load_dinov2(self.device)
-        # 加载 Detector (以备缓存未命中)
-        self.det = fasterrcnn_resnet50_fpn(weights=FasterRCNN_ResNet50_FPN_Weights.DEFAULT).to(self.device)
-        self.det.eval()
+        self.det = load_faster_rcnn(self.device)
 
     def compute(self, **kwargs):
         # parse kwargs

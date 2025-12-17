@@ -3,33 +3,32 @@ from torchvision.models.detection import fasterrcnn_resnet50_fpn, FasterRCNN_Res
 
 from . import DimensionEvaluator
 from .metric import TrajectoryAlignment
-from src.utils.pretrain import get_detection_results
+from src.utils.pretrain import get_detection_results, load_faster_rcnn
 
 class TrajectoryAlignmentEvaluator(DimensionEvaluator):
     def prepare(self):
-        self.model = fasterrcnn_resnet50_fpn(weights=FasterRCNN_ResNet50_FPN_Weights.DEFAULT).to(self.device).eval()
+        self.det = load_faster_rcnn(self.device)
 
     def compute(self, **kwargs):
-        # parse kwargs
-        video_gen: Tensor = kwargs.get('tensor_gen')
+        video_gen = kwargs.get('tensor_gen')
         video_gt = kwargs.get('tensor_gt')
         video_id = kwargs.get('video_id')
         global_cache = kwargs.get('global_cache')
-
+        
+        # 1. Gen Detection (Shared Cache)
         gen_key = f"detection_gen_{video_id}"
         if global_cache is not None and gen_key in global_cache:
-            # cache hits
             det_gen = global_cache[gen_key]
-        else: # cache not hits
-            det_gen = get_detection_results(video_gen[::5], self.model)
+        else:
+            det_gen = get_detection_results(video_gen, self.det)
             if global_cache is not None: global_cache[gen_key] = det_gen
             
+        # 2. GT Detection (Shared Cache)
         gt_key = f"detection_gt_{video_id}"
         if global_cache is not None and gt_key in global_cache:
-            # cache hits
             det_gt = global_cache[gt_key]
-        else: # cache not hits
-            det_gt = get_detection_results(video_gt[::5], self.model)
+        else:
+            det_gt = get_detection_results(video_gt, self.det)
             if global_cache is not None: global_cache[gt_key] = det_gt
 
         H, W = video_gen.shape[2], video_gen.shape[3]

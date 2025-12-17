@@ -2,10 +2,11 @@ from torchvision.models.optical_flow import raft_small, Raft_Small_Weights
 
 from . import DimensionEvaluator
 from .metric import calculate_metrics_based_flow_model
+from src.utils.pretrain import load_raft
 
 class OpticalFlowCorrelationEvaluator(DimensionEvaluator):
     def prepare(self):
-        self.model = raft_small(weights=Raft_Small_Weights.DEFAULT).to(self.device).eval()
+        self.model = load_raft(self.device)
 
     def compute(self, **kwargs):
         # parse kwargs
@@ -22,4 +23,4 @@ class OpticalFlowCorrelationEvaluator(DimensionEvaluator):
             video_id=video_id,
             global_cache=global_cache
         )
-        return results['tf']
+        return results['ofc']
