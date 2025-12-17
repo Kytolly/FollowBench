@@ -2,6 +2,8 @@
     "meta": {
         "team_name": "MyTeam",
         "model_name": "EgoGen-V1",
+        "modal": "fullymodal",
+        "mode": "easy",
         "contact": "email@example.com"
     },
     "results": {

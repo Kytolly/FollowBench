@@ -13,7 +13,7 @@ from huggingface_hub import snapshot_download
 from .option import Options
 from src.utils.video_kit import load_video_to_gpu
 
-MODE_KEY_MAP = {
+MODAL_KEY_MAP = {
     "text_only": "for text only model",
     "text_image": "for text&image model",
     "fullymodal": "for fullymodal model",
@@ -87,7 +87,7 @@ class BenchmarkDataset(Dataset):
             return (self.caption[id]['prompt']['positive'], 
                     self.caption[id]['prompt']['negative'])
         else:
-            return (self.annotation[id]['prompt']['positive'][MODE_KEY_MAP[self.opt.mode]], 
+            return (self.annotation[id]['prompt']['positive'][MODAL_KEY_MAP[self.opt.modal]], 
                     self.annotation[id]['prompt']['negative'])
     
     def _load_image(self, rel_path):
