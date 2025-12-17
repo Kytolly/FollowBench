@@ -1,0 +1,20 @@
+{
+    "id-1": {
+        "the first view": "train/1/ego.mp4",
+        "the third view": "train/1/exo.mp4",
+        "reference": "train/1/ref.png",
+        "prompt": {
+            "positive": "[EGO2EXO] [REF-ID] A woman with long red hair and a white dress [ACTION] is cutting vegetables in a kitchen [TARGET-VIEW] captured in a cinematic medium shot from the side.",
+            "negative": "shaking, blurry, distorted, deformed body, extra limbs, low quality, worst quality, pixelated, text, watermark, ego view, first-person view."
+        }
+    },
+    "id-2": {
+        "the first view": "train/2/ego.mp4",
+        "the third view": "train/2/exo.mp4",
+        "reference": "train/2/ref.png",
+        "prompt": {
+            "positive": "[EGO2EXO] [REF-ID] A woman with long red hair and a white dress [ACTION] is cutting vegetables in a kitchen [TARGET-VIEW] captured in a cinematic medium shot from the side.",
+            "negative": "shaking, blurry, distorted, deformed body, extra limbs, low quality, worst quality, pixelated, text, watermark, ego view, first-person view."
+        }
+    }
+}

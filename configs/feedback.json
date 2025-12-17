@@ -1,0 +1,18 @@
+{
+  "timestamp": "2023-10-27T10:15:30Z",
+  "user_id": "anon_hash_12345", 
+  "video_id": "test_sample_001",
+  "model_a": "EgoGen-V1",
+  "model_b": "AnimateDiff-Baseline",
+  "aspects": {
+    "video_quality": "a",
+    "action_alignment": "tie",
+    "id_consistency": "b",
+    "background_stability": "a"
+  },
+  "winner": "a",
+  "metadata": {
+    "browser": "chrome",
+    "evaluation_time_sec": 45.5
+  }
+}

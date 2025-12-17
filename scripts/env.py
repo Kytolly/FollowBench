@@ -1,14 +1,19 @@
 import os
 import sys
-parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-sys.path.append(parent_dir)
-
-import pynvml
 import torch
-from utils.gpu import get_free_gpu_ids
+from src.utils.gpu import get_free_gpu_ids
+import yaml
 
-print("Python Version:", sys.version)
-print("PyTorch CUDA Version:", torch.version.cuda)
-print("PyTorch Version:", torch.__version__)
-free_gpus = get_free_gpu_ids()
-print(free_gpus)
+def get_env_config(mode):
+    with open('configs/env.yml') as f:
+        config = yaml.load(f, Loader=yaml.FullLoader)
+    f.close()
+    print(f'Loading config: f{config[mode]}')
+    return config[mode]
+
+def print_env():
+    print("Python Version:", sys.version)
+    print("PyTorch CUDA Version:", torch.version.cuda)
+    print("PyTorch Version:", torch.__version__)
+    free_gpus = get_free_gpu_ids()
+    print(free_gpus)

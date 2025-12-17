@@ -3,15 +3,24 @@ import torch.nn.functional as F
 from torchvision import transforms
 from PIL import Image
 
-def prepare_ref_embedding(dinov2_model, dino_transform, ref_img):
+def load_image_to_gpu(image_path, device='cuda', target_size=None):
+    """读取图片并直接转换为 Tensor [C, H, W]"""
+    try:
+        img = Image.open(image_path).convert('RGB')
+        if target_size is not None:
+            img = img.resize(target_size, Image.BILINEAR)
+        tensor = transforms.ToTensor()(img).to(device)
+        return tensor
+    except Exception as e:
+        print(f"Error loading image {image_path}: {e}")
+        return None
+
+def prepare_ref_embedding(dinov2_model, dino_transform, ref_img: Image, device='cpu'):
     """
     预计算参考图的 Embedding
     """
-    device = dinov2_model.device
     try:
-        ref_pil = ref_img.convert('RGB')
-        ref_tensor = transforms.ToTensor()(ref_pil).to(device)
-        ref_input = dino_transform(ref_tensor).unsqueeze(0)
+        ref_input = dino_transform(ref_img).unsqueeze(0).to(device)
         with torch.no_grad():
             ref_emb = dinov2_model(ref_input)
         return ref_emb
@@ -33,11 +42,16 @@ def get_person_embedding_from_tensor(full_frame_tensor, box, dinov2_model, dino_
     
     # full_frame_tensor: [C, H, W] on GPU
     person_crop = full_frame_tensor[:, y1:y2, x1:x2]
-    processed_crop = dino_transform(person_crop)
-    input_batch = processed_crop.unsqueeze(0) # [1, C, 224, 224]
-    with torch.no_grad():
-        embedding = dinov2_model(input_batch)
-    return embedding
+    try:
+        processed_crop = dino_transform(person_crop)
+        input_batch = processed_crop.unsqueeze(0) # [1, C, 224, 224]
+        with torch.no_grad():
+            embedding = dinov2_model(input_batch)
+        return embedding
+    except Exception as e:
+        # Fallback for transforms that only accept PIL
+        print(f"Warning: Tensor transform failed, trying PIL fallback: {e}")
+        return None
 
 def get_pose_vectors(image, model, device):
     # 定义 COCO 格式的肢体连接
