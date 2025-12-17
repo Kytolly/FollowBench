@@ -18,6 +18,7 @@ def AestheticQuality(video_gen: Tensor, aq_model, batch_size=8):
         video_gen: [T, 3, H, W] tensor
         aq_model: pyiqa model
     """
+    assert aq_model is not None
     scores = []
     with torch.no_grad():
         for i in range(0, len(video_gen), batch_size):

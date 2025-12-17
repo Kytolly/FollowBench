@@ -7,8 +7,6 @@ import torch
 
 from .dimension import DimensionEvaluator
 from src.utils.video_kit import load_video_to_gpu
-from src.utils.image_kit import load_image_to_gpu
-from src.utils.gpu import clear_gpu_memory
 
 DIMENSION_NAMES = [
     'FrechetVideoDistance',
@@ -54,15 +52,15 @@ class Ego2ExoFollowShotBench():
         for idx, (rpath_gen, info) in enumerate(annotation.items()):
             path_gen = path_generated_video / rpath_gen
             if rpath_gen not in self.cache['Gen']:
-                self.cache['Gen'][rpath_gen] = load_video_to_gpu(path_gen, self.device, target_size)
+                self.cache['Gen'][rpath_gen] = load_video_to_gpu(path_gen, target_size, self.device)
 
             path_ego = self.path_assets_root / info['Ego']
             if info['Ego'] not in self.cache['Ego']:
-                self.cache['Ego'][info['Ego']] = load_video_to_gpu(path_ego, self.device, target_size)
+                self.cache['Ego'][info['Ego']] = load_video_to_gpu(path_ego, target_size, self.device)
                 
             path_gt = self.path_assets_root / info['Exogt']
             if info['Exogt'] not in self.cache['Exogt']:
-                self.cache['Exogt'][info['Exogt']] = load_video_to_gpu(path_gt, self.device, target_size)
+                self.cache['Exogt'][info['Exogt']] = load_video_to_gpu(path_gt, target_size, self.device)
             
             path_ref = self.path_assets_root / info['Ref']
             if info['Ref'] not in self.cache['Ref']:

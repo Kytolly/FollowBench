@@ -23,9 +23,10 @@ class AppearanceConsistencyEvaluator(DimensionEvaluator):
         
         # 准备参考图 Embedding
         ref_emb: Tensor = prepare_ref_embedding(self.dinov2, self.dino_transform, pillow_ref, self.device)
+        assert ref_emb is not None
         ref_emb.to(self.device)
         
-        # 获取检测结果 (优先读缓存)
+        # 获取检测结果
         cache_key = f"detection_gen_{video_id}"
         if global_cache is not None and cache_key in global_cache:
             # cache hits

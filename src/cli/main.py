@@ -108,6 +108,26 @@ def main():
             torch.cuda.empty_cache()
 
     recorder.save_report()
+    
+    
+# 1. 初始化 Loader
+opt = TestOptions()
+data_loader = Ego2ExoDataLoader(opt)
+dataset = data_loader.load_data()
 
+# 2. 遍历数据进行 Benchmark
+for i, data in enumerate(dataset):
+    print(f"Processing ID: {data['video_id']}")
+    
+    # 获取数据
+    ego_video = data['ego_video'].cuda() # [B, T, C, H, W]
+    ref_img = data['ref_image'].cuda()   # [B, C, H, W]
+    prompt = data['pos_prompt']          # List of strings
+    
+    # 3. 运行模型 (假设 model 是你的生成模型)
+    # generated_video = model(ego_video, ref_img, prompt)
+    
+    # 4. 计算指标 (使用之前设计的 Evaluators)
+    # score = evaluator.compute(generated_video, ...)
 if __name__ == "__main__":
     main()

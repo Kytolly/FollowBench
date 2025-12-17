@@ -20,7 +20,7 @@ def prepare_ref_embedding(dinov2_model, dino_transform, ref_img: Image, device='
     预计算参考图的 Embedding
     """
     try:
-        ref_input = dino_transform(ref_img).unsqueeze(0)
+        ref_input = dino_transform(ref_img).unsqueeze(0).to(device)
         with torch.no_grad():
             ref_emb = dinov2_model(ref_input)
         return ref_emb
@@ -42,11 +42,16 @@ def get_person_embedding_from_tensor(full_frame_tensor, box, dinov2_model, dino_
     
     # full_frame_tensor: [C, H, W] on GPU
     person_crop = full_frame_tensor[:, y1:y2, x1:x2]
-    processed_crop = dino_transform(person_crop)
-    input_batch = processed_crop.unsqueeze(0) # [1, C, 224, 224]
-    with torch.no_grad():
-        embedding = dinov2_model(input_batch)
-    return embedding
+    try:
+        processed_crop = dino_transform(person_crop)
+        input_batch = processed_crop.unsqueeze(0) # [1, C, 224, 224]
+        with torch.no_grad():
+            embedding = dinov2_model(input_batch)
+        return embedding
+    except Exception as e:
+        # Fallback for transforms that only accept PIL
+        print(f"Warning: Tensor transform failed, trying PIL fallback: {e}")
+        return None
 
 def get_pose_vectors(image, model, device):
     # 定义 COCO 格式的肢体连接

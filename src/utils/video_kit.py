@@ -64,7 +64,7 @@ def load_video_as_tensor(video_path):
     tensor = tensor.permute(0, 3, 1, 2).float() / 255.0
     return tensor
 
-def load_video_to_gpu(video_path, device='cuda', target_size=None):
+def load_video_to_gpu(video_path, target_size=None, device='cuda'):
     """读取视频并直接转换为 GPU Tensor [T, C, H, W]"""
     cap = cv2.VideoCapture(str(video_path))
     frames = []
@@ -88,7 +88,6 @@ def load_video_to_gpu(video_path, device='cuda', target_size=None):
     
     # [T, H, W, C] -> [T, C, H, W] & Normalize to [0, 1]
     tensor = tensor.permute(0, 3, 1, 2).float() / 255.0
-    
     return tensor
 
 def tensor_to_numpy(tensor):

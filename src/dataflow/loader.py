@@ -1,9 +1,12 @@
 import torch
 
+from .set import BenchmarkDataset
+from .option import Options
+
 class Ego2ExoDataLoader:
-    def __init__(self, opt):
+    def __init__(self, opt: Options):
         self.opt = opt
-        self.dataset = Ego2ExoBenchmarkDataset(opt)
+        self.dataset = BenchmarkDataset(opt)
         self.dataloader = torch.utils.data.DataLoader(
             self.dataset,
             batch_size=opt.batch_size,
