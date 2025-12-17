@@ -105,3 +105,131 @@ docker-compose exec ego2exo bash
 GPU 不可见：请确保宿主机安装了 nvidia-container-toolkit。可以通过运行 docker run --rm --gpus all nvidia/cuda:12.1.1-base-ubuntu22.04 nvidia-smi 来验证。
 
 ImportError: libGL.so.1：这是 OpenCV 的常见问题，Dockerfile 中的 libgl1-mesa-glx 已经解决了这个问题。
+
+
+Usage Guide
+Ego2ExoFollowShot 支持多种使用方式，您可以根据需求选择作为 Python 库集成、使用命令行工具或直接运行二进制文件。
+
+1. 📦 作为 Python 库使用 (PyPI)
+如果您希望将评测功能集成到自己的训练代码或评估脚本中，推荐使用此方式。
+
+安装
+Bash
+
+# 从 PyPI 安装 (假设已发布)
+pip install ego2exo-bench
+
+# 或者从源码安装
+git clone https://github.com/YourUsername/Ego2ExoFollowShot.git
+cd Ego2ExoFollowShot
+pip install -e .
+代码示例
+运行完整评测：
+
+Python
+
+from ego2exo.bench import run_evaluation
+
+# 一行代码启动评测
+run_evaluation(
+    submission_path="./my_model_results",  # 您的生成结果路径
+    dataroot="./assets/Ego2ExoDataset",    # Benchmark 数据集路径
+    output_dir="./evaluation_results",     # 结果保存路径
+    device="cuda"                          # 指定运行设备
+)
+单独计算某个指标（例如 FVD）：
+
+Python
+
+import torch
+from ego2exo.dimension.fvd import FrechetVideoDistanceEvaluator
+
+# 初始化评估器 (自动加载 I3D 模型)
+evaluator = FrechetVideoDistanceEvaluator(device="cuda")
+evaluator.prepare()
+
+# 准备数据 [T, C, H, W]
+gen_video = torch.rand(16, 3, 224, 224).cuda()
+gt_video = torch.rand(16, 3, 224, 224).cuda()
+
+# 计算分数
+score = evaluator.compute(
+    tensor_gen=gen_video,
+    tensor_gt=gt_video,
+    video_id="test_sample_001"
+)
+print(f"FVD Score: {score}")
+2. 💻 命令行工具 (CLI)
+适合在终端、Shell 脚本或 CI/CD 流程中快速调用。安装库后，系统会自动注册 ego2exo 命令。
+
+基本命令
+Bash
+
+# 查看帮助
+ego2exo --help
+核心功能
+1. 提交格式校验 (Validate) 在跑分之前，检查您的提交文件格式是否符合规范。
+
+Bash
+
+ego2exo validate --submission ./my_submission_folder/
+2. 运行评测 (Evaluate) 运行所有指标并生成 CSV 报告。
+
+Bash
+
+ego2exo evaluate \
+    --submission ./my_submission_folder/ \
+    --dataroot ./assets/Ego2ExoDataset \
+    --output ./results \
+    --device cuda:0
+3. 下载/准备资源 (Setup) 自动下载权重文件和数据集。
+
+Bash
+
+ego2exo setup --download-weights --download-data
+3. 🚀 独立二进制文件 (Standalone Binary)
+如果您不想配置 Python 环境（例如在纯净的生产环境或非技术人员的机器上），可以直接下载编译好的二进制文件。
+
+下载
+请前往 Releases 页面下载对应系统的版本：
+
+🐧 Linux: ego2exo-linux-x86_64
+
+🪟 Windows: ego2exo-win64.exe
+
+🍎 macOS: ego2exo-macos-arm64
+
+使用方法
+二进制文件的参数与 CLI 完全一致。
+
+Linux/macOS:
+
+Bash
+
+# 赋予执行权限
+chmod +x ego2exo-linux-x86_64
+
+# 运行评测
+./ego2exo-linux-x86_64 evaluate --submission ./results/ --device cpu
+Windows (PowerShell/CMD):
+
+PowerShell
+
+.\ego2exo-win64.exe evaluate --submission .\results\ --device cuda
+🛠️ 高级配置 (Advanced)
+您可以通过环境变量或配置文件覆盖默认行为。
+
+环境变量：
+
+EGO2EXO_HOME: 指定模型权重和缓存的根目录（默认 ~/.cache/ego2exo）。
+
+HF_ENDPOINT: 如果在国内，可设置为镜像站加速下载。
+
+示例：
+
+Bash
+
+export EGO2EXO_HOME="/data/shared_models"
+ego2exo evaluate ...
+下一步建议
+为了实现上述愿景，您需要在 setup.py 或 pyproject.toml 中正确配置入口点（Entry Points），以便用户安装后能直接使用 ego2exo 命令：

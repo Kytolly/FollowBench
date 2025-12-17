@@ -8,7 +8,7 @@ from torch.utils.data import DataLoader
 
 from src.dataflow.set import BenchmarkDataset
 from src.dataflow.option import Options
-
+from src.dataflow.submission import Submission
 from scripts.env import get_env_config
 cfg = get_env_config('test')
 def test_loading():
@@ -49,5 +49,14 @@ def test_loading():
         import traceback
         traceback.print_exc()
         
+def test_submission():
+    sub = Submission(
+        source_path=cfg['submission']['source_path'],
+        submission_path=cfg['submission']['submission_path']
+    )
+    ok, rep = sub.valid()
+    print(rep)
+        
 if __name__ == "__main__":
-    test_loading()
+    # test_loading()
+    test_submission()

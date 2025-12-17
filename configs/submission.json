@@ -7,8 +7,10 @@
         "contact": "email@example.com"
     },
     "results": {
-        "1001": "videos/v1.mp4",
-        "1002": "videos/v2.mp4",
-        "1003": "videos/v3.mp4"
+        "case-1": "gen_cogvideo.mp4",
+        "case-2": "gen_ltx.mp4",
+        "case-3": "gen_svd_xt.mp4",
+        "case-4": "gen_wani2v.mp4",
+        "case-5": "gen_wani2v.mp4"
     }
 }
