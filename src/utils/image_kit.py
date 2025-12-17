@@ -15,11 +15,10 @@ def load_image_to_gpu(image_path, device='cuda', target_size=None):
         print(f"Error loading image {image_path}: {e}")
         return None
 
-def prepare_ref_embedding(dinov2_model, dino_transform, ref_img):
+def prepare_ref_embedding(dinov2_model, dino_transform, ref_img, device='cpu'):
     """
     预计算参考图的 Embedding
     """
-    device = dinov2_model.device
     try:
         ref_pil = ref_img.convert('RGB')
         ref_tensor = transforms.ToTensor()(ref_pil).to(device)

@@ -7,8 +7,8 @@ import torch.nn.functional as F
 from torchvision.ops import roi_align
 from torchvision.transforms.functional import to_pil_image
 
-from utils.math import p_corr
-from utils.video_kit import get_traj, compute_flow
+from src.utils.math import p_corr
+from src.utils.video_kit import get_traj, compute_flow
 from . import metric
 
 def AestheticQuality(video_gen: Tensor, aq_model, batch_size=8):
@@ -154,12 +154,11 @@ def FrechetVideoDistance(feat_gen: np.ndarray, feat_gt: np.ndarray):
     计算 FVD (Fréchet Video Distance)
     使用 Scipy 进行矩阵运算以保证数值稳定性
     """
-    if feat_gen.shape[0] == 0 or feat_gt.shape[0] == 0:
+    if feat_gen.shape[0] < 2 or feat_gt.shape[0] < 2:
         return 0.0
+        
     mu1, sigma1 = np.mean(feat_gen, axis=0), np.cov(feat_gen, rowvar=False)
     mu2, sigma2 = np.mean(feat_gt, axis=0), np.cov(feat_gt, rowvar=False)
-    if feat_gen.shape[0] == 1: sigma1 = 0.0
-    if feat_gt.shape[0] == 1: sigma2 = 0.0
     
     diff = mu1 - mu2
     if np.isscalar(sigma1) and np.isscalar(sigma2):
@@ -171,7 +170,6 @@ def FrechetVideoDistance(feat_gen: np.ndarray, feat_gt: np.ndarray):
         if np.iscomplexobj(covmean):
             covmean = covmean.real
         fvd = diff.dot(diff) + np.trace(sigma1 + sigma2 - 2.0 * covmean)
-        
     return float(fvd)
 
 def HumanActionAlignment(gen_results, gt_results, H, W):
@@ -325,40 +323,53 @@ def calculate_metrics_based_flow_model(
     gt_frames=None,
     metrics_to_compute=None,
     flow_model=None,
-    device=None):
-    """基于预加载的 RAFT 模型计算所有基于光流的指标 TF, MS, DD, OFC
-    Args:
-        gen_frames: 生成视频 Tensor [T, C, H, W] (0-1)
-        gt_frames:  GT视频 Tensor [T, C, H, W] (0-1)
-        如果提供，则计算 OFC。
+    device=None,
+    video_id=None,      
+    global_cache=None): 
+    """
+    基于预加载的 RAFT 模型计算所有基于光流的指标 TF, MS, DD, OFC
+    优化: 支持将计算好的光流 (flow) 缓存到 global_cache 中
     """
     if device is None: device = gen_frames.device
     assert flow_model is not None 
+    if metrics_to_compute is None: metrics_to_compute = set()
 
-    # 计算生成视频光流
-    gen_norm = (gen_frames * 2.0) - 1.0
-    gen_flows = compute_flow(gen_norm, flow_model) # [T-1, 2, H, W]
+    # 1. Gen Flow (缓存读写)
+    gen_flow_key = f"flow_gen_{video_id}"
+    if global_cache is not None and gen_flow_key in global_cache:
+        gen_flows = global_cache[gen_flow_key]
+    else:
+        gen_norm = (gen_frames * 2.0) - 1.0
+        gen_flows = compute_flow(gen_norm, flow_model)
+        if global_cache is not None and video_id is not None and gen_flows is not None:
+            global_cache[gen_flow_key] = gen_flows
+
     if gen_flows is None:
         return {'tf': 0.0, 'ms': 0.0, 'dd': 0.0, 'ofc': 0.0}
     
     results = {}
-    # --- Dynamic Degree (DD) ---
     if 'dd' in metrics_to_compute:
         results['dd'] = metric.DynamicDegree(gen_flows)
-    
-    # --- Motion Smoothness (MS) ---
     if 'ms' in metrics_to_compute:
         results['ms'] = metric.MotionSmoothness(gen_flows)
-        
-    # --- Temporal Flickering (TF) ---
     if 'tf' in metrics_to_compute:
         results['tf'] = metric.TemporalFlickering(gen_frames, gen_flows, device)
 
-    # --- Optical Flow Correlation --- 
     if 'ofc' in metrics_to_compute and gt_frames is not None:
-        if len(gt_frames) >= 2:
-            gt_norm = (gt_frames * 2.0) - 1.0
-            gt_flows = compute_flow(gt_norm, flow_model)
+        # 2. GT Flow (缓存读写)
+        gt_flow_key = f"flow_gt_{video_id}"
+        if global_cache is not None and gt_flow_key in global_cache:
+            gt_flows = global_cache[gt_flow_key]
+        else:
+            if len(gt_frames) >= 2:
+                gt_norm = (gt_frames * 2.0) - 1.0
+                gt_flows = compute_flow(gt_norm, flow_model)
+                if global_cache is not None and video_id is not None:
+                    global_cache[gt_flow_key] = gt_flows
+            else:
+                gt_flows = None
+
+        if gt_flows is not None:
             results['ofc'] = metric.OpticalFlowCorrelation(gen_flows, gt_flows, device)
         else:
             results['ofc'] = 0.0

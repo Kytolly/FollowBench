@@ -1,0 +1,81 @@
+name: CI
+
+on:
+  push:
+    branches: [ "main" ]
+    paths-ignore:
+      - 'README.md'
+      - 'docs/**'
+  pull_request:
+    branches: [ "main" ]
+    paths-ignore:
+      - 'README.md'
+      - 'docs/**'
+
+jobs:
+  build-and-test:
+    name: Build & Test (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10"] # 可以增加 "3.9", "3.11" 进行多版本测试
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: 'pip' # 自动缓存 pip 依赖
+
+    # 1. 安装依赖
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        # 安装 PyTorch CPU 版本 (加快 CI 下载速度)
+        pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+        # 安装核心依赖
+        pip install numpy scipy Pillow pyyaml transformers pyiqa pynvml huggingface_hub click pandas tqdm
+        # 如果有 requirements.txt，也可以用: pip install -r requirements.txt
+        # 安装开发工具 (Linting)
+        pip install flake8 black isort
+
+    # 2. 代码风格检查 (Linting)
+    - name: Check Code Formatting (Black)
+      run: |
+        # 检查是否符合 Black 规范 (不修改，只报错)
+        black --check src tests scripts
+
+    - name: Check Imports Sorting (Isort)
+      run: |
+        isort --check-only --profile black src tests scripts
+
+    - name: Lint with Flake8
+      run: |
+        # E501: 忽略行过长 (Benchmark 代码有时需要长行)
+        # F401: 忽略未使用的 import (__init__.py 中常见)
+        flake8 src tests scripts --count --select=E9,F63,F7,F82 --show-source --statistics
+        flake8 src tests scripts --count --ignore=E501,F401,W503 --max-complexity=15 --max-line-length=127 --statistics
+
+    # 3. 运行单元测试
+    - name: Run Unit Tests
+      env:
+        PYTHONPATH: ${{ github.workspace }}
+      run: |
+        # 运行我们刚刚集成的所有指标测试
+        python -m unittest tests.test_metrics
+
+    # 4. (可选) 运行端到端冒烟测试
+    # 确保 bench.py 主流程能跑通 (使用 Dummy 数据)
+    - name: Run Smoke Test (Bench Script)
+      env:
+        PYTHONPATH: ${{ github.workspace }}
+      run: |
+        # 创建一个假的 submission 目录用于测试
+        mkdir -p temp_submission
+        touch temp_submission/dummy_video_for_test.mp4
+        
+        # 运行 bench.py (带 help 参数或其他快速退出的参数) 来检查是否有 Import 错误
+        python src/Ego2ExoFollowShot/bench.py --help

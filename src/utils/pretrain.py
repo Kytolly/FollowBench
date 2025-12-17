@@ -7,6 +7,7 @@ import torch.nn.functional as F
 from pytorchvideo.models.resnet import create_resnet
 from torchvision import transforms
 from torchvision.models.detection import KeypointRCNN, keypointrcnn_resnet50_fpn, KeypointRCNN_ResNet50_FPN_Weights
+from torchvision.models.optical_flow import raft_large, Raft_Large_Weights
 
 def load_dinov2(device):
     print("Loading DINOv2 for Appearance Consistency...")
@@ -18,9 +19,8 @@ def load_dinov2(device):
     ])
     return model, transform
 
-def load_imaging_quality_metric(device):
+def load_musiq(device):
     try:
-        print("Loading Imaging Quality Metric (MUSIQ)...")
         metric = pyiqa.create_metric('musiq', device=device)
         metric.eval()
         return metric
@@ -28,7 +28,7 @@ def load_imaging_quality_metric(device):
         print(f"Failed to load MUSIQ: {e}")
         return None
     
-def load_aesthetic_metric(device):
+def load_laion_aes_vit(device):
     try:
         logging.info("Loading Aesthetic Metric (LAION-AES ViT-L/14)...")
         metric = pyiqa.create_metric('laion_aes_pl', device=device)
@@ -37,7 +37,14 @@ def load_aesthetic_metric(device):
     except Exception as e:
         print(f"Failed to load pyiqa: {e}")
         return None
-    
+
+def load_raft(device):
+    """加载 RAFT 光流模型"""
+    print("Loading RAFT model for Flow Metrics...")
+    model = raft_large(weights=Raft_Large_Weights.DEFAULT, progress=False).to(device)
+    model.eval()
+    return model
+
 def get_detection_results(video_tensor: Tensor, detector, device=None):
     """
     Faster R-CNN model 推理计算视频的检测结果 (Bounding Boxes)

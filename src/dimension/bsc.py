@@ -3,9 +3,9 @@ from PIL import Image
 from transformers import CLIPProcessor, CLIPModel
 from torchvision.models.detection import fasterrcnn_resnet50_fpn, FasterRCNN_ResNet50_FPN_Weights
 
-from . import metric
 from . import DimensionEvaluator
-from utils import pretrain
+from .metric import BackgroundSemanticConsistency
+from src.utils.pretrain import get_detection_results
 
 class BackgroundSemanticConsistencyEvaluator(DimensionEvaluator):
     def prepare(self):
@@ -29,11 +29,11 @@ class BackgroundSemanticConsistencyEvaluator(DimensionEvaluator):
             # cache hits
             detections = global_cache[cache_key]
         else: # cache not hits
-            detections = pretrain.get_detection_results(video_gen, self.det)
+            detections = get_detection_results(video_gen, self.det)
             if global_cache is not None:
                 global_cache[cache_key] = detections
 
-        return metric.BackgroundSemanticConsistency(
+        return BackgroundSemanticConsistency(
             ref_img_pil=pillow_ref,
             video_gen=video_gen,
             clip_model=self.clip,

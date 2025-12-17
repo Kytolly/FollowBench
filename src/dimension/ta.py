@@ -3,7 +3,7 @@ from torchvision.models.detection import fasterrcnn_resnet50_fpn, FasterRCNN_Res
 
 from . import DimensionEvaluator
 from .metric import TrajectoryAlignment
-import utils.pretrain
+from src.utils.pretrain import get_detection_results
 
 class TrajectoryAlignmentEvaluator(DimensionEvaluator):
     def prepare(self):
@@ -21,7 +21,7 @@ class TrajectoryAlignmentEvaluator(DimensionEvaluator):
             # cache hits
             det_gen = global_cache[gen_key]
         else: # cache not hits
-            det_gen = utils.pretrain.get_detection_results(video_gen[::5], self.model)
+            det_gen = get_detection_results(video_gen[::5], self.model)
             if global_cache is not None: global_cache[gen_key] = det_gen
             
         gt_key = f"detection_gt_{video_id}"
@@ -29,7 +29,7 @@ class TrajectoryAlignmentEvaluator(DimensionEvaluator):
             # cache hits
             det_gt = global_cache[gt_key]
         else: # cache not hits
-            det_gt = utils.pretrain.get_detection_results(video_gt[::5], self.model)
+            det_gt = get_detection_results(video_gt[::5], self.model)
             if global_cache is not None: global_cache[gt_key] = det_gt
 
         H, W = video_gen.shape[2], video_gen.shape[3]

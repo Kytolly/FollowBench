@@ -1,12 +1,10 @@
-import torch
-
 from . import DimensionEvaluator
-from utils import pretrain, video_kit
+from src.utils.pretrain import load_laion_aes_vit
 from .metric import AestheticQuality
 
 class AestheticQualityEvaluator(DimensionEvaluator):
     def prepare(self):
-        self.model = pretrain.load_aesthetic_metric(self.device)
+        self.model = load_laion_aes_vit(self.device)
 
     def compute(self, **kwargs):
         video_gen = kwargs.get('tensor_gen')

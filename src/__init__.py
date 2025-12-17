@@ -6,9 +6,9 @@ import importlib
 import torch
 
 from .dimension import DimensionEvaluator
-from utils.video_kit import load_video_to_gpu
-from utils.image_kit import load_image_to_gpu
-from utils.gpu import clear_gpu_memory
+from src.utils.video_kit import load_video_to_gpu
+from src.utils.image_kit import load_image_to_gpu
+from src.utils.gpu import clear_gpu_memory
 
 DIMENSION_NAMES = [
     'FrechetVideoDistance',

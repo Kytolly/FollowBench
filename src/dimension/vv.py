@@ -1,6 +1,6 @@
 from torchvision.models.detection import fasterrcnn_resnet50_fpn, FasterRCNN_ResNet50_FPN_Weights
 
-import utils.pretrain
+from src.utils.pretrain import get_detection_results
 from .metric import ViewpointValidity
 from . import DimensionEvaluator
 
@@ -20,7 +20,7 @@ class ViewpointValidityEvaluator(DimensionEvaluator):
             detections = global_cache[cache_key]
         else: # cache not hits
             sampled_video = video_gen[::5]
-            detections = utils.pretrain.get_detection_results(sampled_video, self.model)
+            detections = get_detection_results(sampled_video, self.model)
             if global_cache is not None:
                 global_cache[cache_key] = detections
 

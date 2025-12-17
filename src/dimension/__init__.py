@@ -1,4 +1,4 @@
-import utils.gpu
+from ..utils import gpu
 
 class DimensionEvaluator():
     def __init__(self, device):
@@ -15,4 +15,4 @@ class DimensionEvaluator():
         if self.model is not None:
             del self.model
             self.model = None
-        utils.gpu.clear_gpu_memory()
+        gpu.clear_gpu_memory()

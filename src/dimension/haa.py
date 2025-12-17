@@ -2,8 +2,8 @@ from torch import Tensor
 from torchvision.models.detection import keypointrcnn_resnet50_fpn, KeypointRCNN_ResNet50_FPN_Weights
 
 from . import DimensionEvaluator
-from . import metric
-import utils.pretrain
+from .metric import HumanActionAlignment
+from src.utils.pretrain import get_keypoint_results
 
 class HumanActionAlignmentEvaluator(DimensionEvaluator):
     def prepare(self):
@@ -23,7 +23,7 @@ class HumanActionAlignmentEvaluator(DimensionEvaluator):
             # cache hits
             kp_gen = global_cache[gen_key]
         else: # cache not hits
-            kp_gen = utils.pretrain.get_keypoint_results(video_gen, self.model)
+            kp_gen = get_keypoint_results(video_gen, self.model)
             if global_cache is not None: 
                 global_cache[gen_key] = kp_gen
             
@@ -33,9 +33,9 @@ class HumanActionAlignmentEvaluator(DimensionEvaluator):
             # cache hits
             kp_gt = global_cache[gt_key]
         else: # cache not hits
-            kp_gt = utils.pretrain.get_keypoint_results(video_gt, self.model)
+            kp_gt = get_keypoint_results(video_gt, self.model)
             if global_cache is not None: 
                 global_cache[gt_key] = kp_gt
 
         H, W = video_gen.shape[2], video_gen.shape[3]
-        return metric.HumanActionAlignment(kp_gen, kp_gt, H, W)
+        return HumanActionAlignment(kp_gen, kp_gt, H, W)

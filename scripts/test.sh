@@ -1,9 +1,11 @@
+#!/bin/bash
+# scripts/test.sh
+
 export PYTHONPATH=$PYTHONPATH:.
 pyclean . -d
-python -m unittest tests.test_flow_metrics
-python -m unittest tests.test_detection_metrics
-python -m unittest tests.test_feature_metrics
-python -m unittest tests.test_pose_metrics
-python -m unittest tests.test_quality_metrics
-python -m unittest tests.test_computation
+
+echo ">>> Running Metric Tests..."
+python -m unittest tests.test_metrics
+echo ">>> Metric Tests Completed!"
+
 pyclean . -d
