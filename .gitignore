@@ -208,4 +208,4 @@ __marimo__/
 
 assets/
 library/
-library/flash_attn-2.7.3+cu12torch2.5cxx11abiFALSE-cp310-cp310-linux_x86_64.whl
+configs/env.yml

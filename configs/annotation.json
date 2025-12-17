@@ -1,8 +1,8 @@
 {
     "case-1": {
-        "the first view": "train/1/ego.mp4",
-        "the third view": "train/1/exo.mp4",
-        "reference": "train/1/ref.png",
+        "the first view": "test/1/ego.mp4",
+        "the third view": "test/1/exo.mp4",
+        "reference": "test/1/ref.png",
         "prompt": {
             "positive":{
                 "for text only model": "",
@@ -13,9 +13,9 @@
         }
     },
     "case-2": {
-        "the first view": "train/1/ego.mp4",
-        "the third view": "train/1/exo.mp4",
-        "reference": "train/1/ref.png",
+        "the first view": "test/2/ego.mp4",
+        "the third view": "test/2/exo.mp4",
+        "reference": "test/2/ref.png",
         "prompt": {
             "positive":{
                 "for text only model": "",
