@@ -13,6 +13,11 @@ from huggingface_hub import snapshot_download
 from .option import Options
 from src.utils.video_kit import load_video_to_gpu
 
+MODE_KEY_MAP = {
+    "text_only": "for text only model",
+    "text_image": "for text&image model",
+    "fullymodal": "for fullymodal model",
+}
 class BenchmarkDataset(Dataset):
     def __init__(self, opt: Options):
         self.opt = opt
@@ -30,7 +35,7 @@ class BenchmarkDataset(Dataset):
         # 2. 加载标注
         self._load_caption()
         self._load_annotation()
-        self.dataset = self.annotation if self.opt.phase == 'train' else self.__annotations__
+        self.dataset = self.caption if self.opt.phase == 'train' else self.annotation
         self.ids = list(self.dataset.keys())
 
     def _ensure_dataset_exists(self):
@@ -77,22 +82,32 @@ class BenchmarkDataset(Dataset):
         finally:
             f.close()
     
-    def _get_prompt(self):
+    def _get_prompt(self, id):
         if self.opt.phase == 'train':
-            return self.caption['prompt']['positive'], self.caption['prompt']['negative']
+            return (self.caption[id]['prompt']['positive'], 
+                    self.caption[id]['prompt']['negative'])
         else:
-            return self.annotation['prompt']['positive'][self.opt.mode], self.annotation['prompt']['negative']
+            return (self.annotation[id]['prompt']['positive'][MODE_KEY_MAP[self.opt.mode]], 
+                    self.annotation[id]['prompt']['negative'])
     
     def _load_image(self, rel_path):
         """读取图片 -> [C, H, W]"""
         path = os.path.join(self.opt.assets, rel_path)
-        img = Image.open(path).convert('RGB')
-        return img
+        try:
+            img = Image.open(path).convert('RGB')
+            return self.transform(img) # [Fix] Apply transform
+        except Exception as e:
+            logging.error(f"Failed to load image {path}: {e}")
+            return torch.zeros(3, self.opt.load_size, self.opt.load_size)
     
     def _load_video(self, rel_path):
         """读取视频 -> [T, C, H, W]"""
         path = os.path.join(self.opt.assets, rel_path)
-        return load_video_to_gpu(path, device='cpu')
+        try:
+            return load_video_to_gpu(path, device='cpu') 
+        except Exception as e:
+            logging.error(f"Failed to load video {path}: {e}")
+            return torch.zeros(self.opt.clip_len, 3, self.opt.load_size, self.opt.load_size)
 
     def __len__(self):
         return len(self.ids)
@@ -103,8 +118,8 @@ class BenchmarkDataset(Dataset):
         
         ego_video = self._load_video(data['the first view'])
         exo_video = self._load_video(data['the third view']) # GT
-        ref_img = self._load_image(data['reference image'])
-        pos_p, neg_p = self._get_prompt(data['prompt'])
+        ref_img = self._load_image(data['reference'])
+        pos_p, neg_p = self._get_prompt(vid_id)
         
         return {
             'video_id': vid_id,

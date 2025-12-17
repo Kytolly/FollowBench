@@ -24,6 +24,9 @@ from src.dimension.aq import AestheticQualityEvaluator
 from src.dimension.iq import ImagingQualityEvaluator
 from src.dimension.fvd import FrechetVideoDistanceEvaluator
 
+from scripts.env import get_env_config
+cfg = get_env_config('test')
+    
 class TestRealPipeline(unittest.TestCase):
     """
     全流程集成测试：使用真实数据运行所有指标，验证计算通路和缓存逻辑。
@@ -34,7 +37,7 @@ class TestRealPipeline(unittest.TestCase):
         print(f"\n>>> Running Integration Test on {cls.device} ...")
         
         # 1. 定义数据路径
-        cls.data_dir = "assets/cache/example"
+        cls.data_dir = cfg['path_assets']
         cls.ego_path = os.path.join(cls.data_dir, "ego.mp4")
         cls.exo_path = os.path.join(cls.data_dir, "exo.mp4") # GT
         cls.gen_path = os.path.join(cls.data_dir, "gen.mp4") 

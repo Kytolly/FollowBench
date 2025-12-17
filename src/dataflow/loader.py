@@ -3,7 +3,7 @@ import torch
 from .set import BenchmarkDataset
 from .option import Options
 
-class Ego2ExoDataLoader:
+class BenchmarkDataLoader:
     def __init__(self, opt: Options):
         self.opt = opt
         self.dataset = BenchmarkDataset(opt)
