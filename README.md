@@ -1,5 +1,4 @@
-# README
-```markdown
+
 # Ego2ExoFollowShot: Transforming First-Person Chaos into Third-Person Cinematic
 
 <div align="center">
