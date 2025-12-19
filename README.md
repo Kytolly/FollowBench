@@ -1,18 +1,4 @@
-这是一个按照 CVPR/ICCV/SIGGRAPH 等顶会开源项目标准重构的 `README.md` 模板。
-
-**核心设计理念：**
-
-1. **First Impression (前3秒原则)**：开头必须是高质量的 GIF/视频展示 (Teaser)，一目了然地展示“输入是什么，输出是什么”。
-2. **Usability (易用性)**：将环境配置、推理、评测的命令极简化（One-line command）。
-3. **Methodology (技术深度)**：用一张清晰的架构图展示 Spatial Concatenation 和 IC-LoRA 的逻辑，体现学术价值。
-4. **Structure (结构化)**：将复杂的比赛提交、Docker 教程折叠或分流，保持主页整洁。
-
-以下是为您整理的文档结构（通常顶会项目使用英文 README，我在关键位置用中文备注了 **[TODO]** 指导您填充素材）。
-
----
-
-# README.md 模板内容
-
+# README
 ```markdown
 # Ego2ExoFollowShot: Transforming First-Person Chaos into Third-Person Cinematic
 
