@@ -24,7 +24,7 @@ class BenchmarkDataset(Dataset):
         self.caption = {}
         self.annotation = {}
         self.transform = transforms.Compose([
-            transforms.Resize((opt.load_size, opt.load_size)),
+            transforms.Resize((opt.height, opt.width)),
             transforms.ToTensor(),
             transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
         ])

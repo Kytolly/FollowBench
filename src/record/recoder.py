@@ -3,63 +3,74 @@ import json
 import numpy as np
 from datetime import datetime
 
-class Ego2ExoRecorder:
-    def __init__(self, team_name, model_name, output_dir, modal="fullymodal", mode="easy"):
-        self.meta = {
-            "team_name": team_name,
-            "model_name": model_name,
-            "modal": modal,
-            "mode": mode,
-            "contact": "N/A",
-            "timestamp": datetime.now().isoformat()
-        }
+class Recorder:
+    def __init__(self, meta, output_dir):
+        """
+        初始化 Recorder
+        Args:
+            meta (dict): 包含 team_name, model_name等元数据
+            output_dir (str): 报告保存目录
+        """
+        self.meta = meta
+        self.record_time = datetime.now().isoformat()
+        self.meta["timestamp"] = self.record_time
         self.output_dir = output_dir
-        os.makedirs(output_dir, exist_ok=True)
+        os.makedirs(self.output_dir, exist_ok=True)
         
-        # 内部存储结构: { MetricName: { CaseID: Score } }
-        self.results = {}
+        # 存储结构: { MetricName: { CaseID: Score } } 或 { MetricName: Score }
+        self.data = {}
 
-    def add_case_score(self, case_id, scores_dict):
+    def update(self, metric_name, results):
         """
-        添加单个 Case 的多个指标得分
-        scores_dict: {'AestheticQuality': 5.5, 'FVD': 120.3, ...}
+        更新特定指标的计算结果。
+        
+        Args:
+            metric_name (str): 指标名称 (e.g., 'AestheticQuality', 'FrechetVideoDistance')
+            results (dict | float): 
+                - 如果是 dict: {case_id: score, ...} (Case-level metrics)
+                - 如果是 float/int: score (Dataset-level metrics like FVD)
         """
-        for metric, score in scores_dict.items():
-            if metric not in self.results:
-                self.results[metric] = {}
+        # 1. 处理 Case-level 结果 (Dict)
+        if isinstance(results, dict):
+            # 数据清洗：将 numpy 类型转为 python原生类型，确保 json 可序列化
+            clean_results = {}
+            for k, v in results.items():
+                if isinstance(v, (np.floating, float)):
+                    clean_results[k] = float(v)
+                elif isinstance(v, (np.integer, int)):
+                    clean_results[k] = int(v)
+                else:
+                    clean_results[k] = v
             
-            # 确保 score 是 Python float 类型 (非 Tensor/Numpy)
-            if isinstance(score, (np.float32, np.float64)):
-                score = float(score)
+            # 存入数据
+            self.data[metric_name] = clean_results
+        
+        # 2. 处理 Dataset-level 结果 (Scalar)
+        elif isinstance(results, (np.floating, float, np.integer, int)):
+            self.data[metric_name] = float(results)
             
-            self.results[metric][case_id] = score
-
-    def add_dataset_metric(self, metric_name, score):
-        """添加数据集级别的指标 (如 FVD)"""
-        if metric_name not in self.results:
-            self.results[metric_name] = score # 直接存值，而不是 dict
         else:
-            self.results[metric_name] = score
+            print(f"[Recorder] Warning: Unexpected result type for {metric_name}: {type(results)}")
+            self.data[metric_name] = results
 
     def save_report(self, filename=None):
-        if filename is None:
-            filename = f"report_{self.meta['model_name']}.json"
+        """
+        将结果保存为符合 report.json 格式的文件
+        """
+        if filename == None: filename = f'{self.record_time}_results.json'
+        report_path = os.path.join(self.output_dir, filename)
         
-        save_path = os.path.join(self.output_dir, filename)
-        
-        final_data = {
+        # 构造最终的 JSON 结构: meta 在最顶层，随后是各指标
+        final_report = {
             "meta": self.meta,
-            **self.results # 解包 metrics
+            **self.data  # 解包指标数据
         }
         
-        with open(save_path, 'w', encoding='utf-8') as f:
-            json.dump(final_data, f, indent=4)
-        
-        print(f"Report saved to {save_path}")
-        return save_path
-
-    @staticmethod
-    def load_report(path):
-        with open(path, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-        return data
+        try:
+            with open(report_path, 'w', encoding='utf-8') as f:
+                json.dump(final_report, f, indent=4, ensure_ascii=False)
+            print(f"Evaluation Report saved to: {report_path}")
+        except Exception as e:
+            print(f"[Recorder] Error saving report: {e}")
+            
+        return report_path

@@ -8,7 +8,7 @@ from torch.utils.data import DataLoader
 from src.dataflow.loader import BenchmarkDataLoader
 from src.dataflow.submission import Submission
 from src.record.recoder import Ego2ExoRecorder
-from src.dimension import DIMENSION_MODULE_MAP
+from src import DIMENSION_MODULE_MAP
 import importlib
 
 class BenchmarkRunner:

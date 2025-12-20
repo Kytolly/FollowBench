@@ -1,161 +1,105 @@
-from PIL import Image
-from pathlib import Path
-import json
 import logging
-import importlib
+import os
+from pathlib import Path
 import torch
 
-from .dimension import DimensionEvaluator
-from src.utils.video_kit import load_video_to_gpu
+from src.dimension import BenchRouter, DIMENSION_NAMES
+from src.record.recoder import Recorder
+from src.dataflow.submission import Submission
+from src.dataflow.option import Options
+from src.dataflow.loader import BenchmarkDataLoader
+from configs import CONFIG
 
-DIMENSION_NAMES = [
-    'FrechetVideoDistance',
-    'AestheticQuality',
-    'ImagingQuality',
-    'TemporalFlickering',
-    'MotionSmoothness',
-    'DynamicDegree',
-    'CameraCenteringError',
-    'AppearanceConsistency',
-    'ViewpointValidity',
-    'BackgroundSemanticConsistency',
-    'HumanActionAlignment',
-    'OpticalFlowCorrelation',
-    'TrajectoryAlignment',
-    ]
-DIMENSION_NAMES_IN_SHORT = ['fvd','aq','iq','tf','ms','dd','cce','ac','vv','bsc','haa','ofc','ta']
-DIMENSION_MODULE_MAP = {}
-for dn, dnis in zip(DIMENSION_NAMES, DIMENSION_NAMES_IN_SHORT):
-    DIMENSION_MODULE_MAP[dn] = dnis
-    
-class Ego2ExoFollowShotBench():
-    def __init__(self,
-                 device,
-                 path_assets_root='../../assets/', # 所有资源的根目录 包括输入ego,ref,exo_gt
-                 ):
+class Bench():
+    """
+    Ego2Exo Benchmark Engine.
+    Pipeline: Submission -> DataLoader -> BenchRouter -> Recorder
+    """
+    def __init__(self, device, assets_root='assets/'):
         self.device = device
-        
-        self.path_assets_root = Path(path_assets_root)
-        if not self.path_assets_root.exists():
-            raise FileNotFoundError(f"Path not found at {self.path_assets_root}.")
-        
-        self.cache = {
-            'Gen': {}, # 生成视频
-            'Ego': {}, # Ego视频
-            'Exogt':  {}, # GT视频
-            'Ref': {} # 参考图片
-        }
-    
-    def _caching(self, annotation: dict, path_generated_video, target_size):
-        logging.info("caching all videos to GPU...")
-        total = len(annotation)
-        for idx, (rpath_gen, info) in enumerate(annotation.items()):
-            path_gen = path_generated_video / rpath_gen
-            if rpath_gen not in self.cache['Gen']:
-                self.cache['Gen'][rpath_gen] = load_video_to_gpu(path_gen, target_size, self.device)
+        self.assets_root = Path(assets_root)
+        self.router = BenchRouter(device, assets_root)
 
-            path_ego = self.path_assets_root / info['Ego']
-            if info['Ego'] not in self.cache['Ego']:
-                self.cache['Ego'][info['Ego']] = load_video_to_gpu(path_ego, target_size, self.device)
-                
-            path_gt = self.path_assets_root / info['Exogt']
-            if info['Exogt'] not in self.cache['Exogt']:
-                self.cache['Exogt'][info['Exogt']] = load_video_to_gpu(path_gt, target_size, self.device)
-            
-            path_ref = self.path_assets_root / info['Ref']
-            if info['Ref'] not in self.cache['Ref']:
-                self.cache['Ref'][info['Ref']] = Image.open(path_ref).convert('RGB')
-                
-            if (idx + 1) % 5 == 0:
-                logging.info(f"Loaded {idx + 1}/{total} video pairs to GPU.")
-        logging.info("All videos cached in VRAM.")
-    
-    def evaluate(self,
-                 path_generated_video, # 用户的生成结果目录
-                 path_annotation_json, # 相对 assets_root 路径
-                 path_output, # 保持 json 格式
-                 dimension_list: list[str]=None,
-                 target_size=(224, 224),):
-        # 路径检查
-        path_generated_video = Path(path_generated_video)
-        if not path_generated_video.exists():
-            raise FileNotFoundError(f"Path not found at {path_generated_video}.")
+    def evaluate(self, 
+                 source_path: str,
+                 submission_path: str, 
+                 output_dir: str = 'output/',
+                 metrics_list: list = None,
+                 batch_size: int = 1,
+                 num_workers: int = 4,
+                 *args,
+                 **kwargs):
+        """
+        Args:
+            submission_path: submission.json 的路径
+            output_dir: 结果输出文件夹
+            metrics_list: 需要计算的指标列表
+        """
+        if metrics_list is None:
+            metrics_list = DIMENSION_NAMES
+
+        # 1. 加载 Submission
+        logging.info(f"Loading submission from {submission_path}")
+        submission = Submission(
+            source_path=source_path,
+            submission_path=submission_path
+        )
         
-        path_annotation_json = Path(path_annotation_json)
-        with open(path_annotation_json, 'r') as f: 
-            annotation = json.load(f)
-        f.close()
+        # 2. 准备 Dataflow Options
+        meta = submission.meta_info
+        anno_path = kwargs.get('annotation_path', self.assets_root / 'annotation.json')
+        # caption_path = kwargs.get('caption_path', self.assets_root / 'annotation.json')
+        opt = Options(
+            assets=str(self.assets_root),
+            annotation=str(anno_path),
+            phase='test', # 强制为 test 模式
+            modal=meta.get('modal', 'vace_instruct'),
+            mode=meta.get('mode', 'easy'),
+            batch_size=batch_size,
+            num_workers=num_workers,
+            height=CONFIG['rules']['resolution_height'],
+            width=CONFIG['rules']['resolution_width'],
+            clip_len=300   # 默认帧数
+        )
         
-        # 缓存
+        # 3. 初始化 DataLoader
+        # 这将自动加载 GT 和 Ego 视频，无需手动传路径
+        logging.info(f"Initializing DataLoader with annotation: {opt.annotation}")
         try:
-            self._caching(annotation, path_generated_video, target_size)
-        except torch.cuda.OutOfMemoryError:
-            logging.error("OOM during pre-loading! Try reducing video resolution or batch size.")
-            torch.cuda.empty_cache()
-            return
+            loader_wrapper = BenchmarkDataLoader(opt)
+            dataloader = loader_wrapper.dataloader
+        except Exception as e:
+            logging.error(f"Failed to create DataLoader: {e}")
+            raise e
+
+        # 4. 初始化 Recorder
+        recorder = Recorder(meta, output_dir)
         
-        # 解析本次运行需要计算哪些指标
-        metrics_to_compute = set()
-        for d in dimension_list:
-            if d in DIMENSION_MODULE_MAP: # 如果是全称，转短名
-                metrics_to_compute.add(DIMENSION_MODULE_MAP[d])
-            else: # 已经是短名
-                metrics_to_compute.add(d.lower())
-                
-        # 计算阶段
-        results= {}
-        path_output = Path(path_output)
-        for dimension in dimension_list:
-            # FVD 特殊处理：跳过单视频循环，直接算全集
-            if dimension == 'FrechetVideoDistance':
-                logging.info("Calculating FVD for the entire dataset...")
-                from dimension.fvd import FrechetVideoDistanceEvaluator
-                fvd_eval = FrechetVideoDistanceEvaluator(self.device)
-                # 假设 annotation 里第一个元素的 GT 目录代表了整个 GT 目录
-                first_info = list(annotation.values())[0]
-                path_gt_dir = (self.path_assets_root / first_info['Exogt']).parent
-                score = fvd_eval.compute_dataset(path_generated_video, path_gt_dir)
-                results['FVD'] = score
-                continue
+        # 5. 执行计算循环
+        logging.info("Starting Evaluation Pipeline...")
+        for metric in metrics_list:
+            logging.info(f"--- Computing {metric} ---")
             
-            try:
-                # dynamic load modules
-                dimension_module = importlib.import_module(f'dimension.{DIMENSION_MODULE_MAP[dimension]}')
-                evaluate_class = getattr(dimension_module, f'{dimension}Evaluator')
-                evaluator: DimensionEvaluator = evaluate_class(self.device)
-                self.prepare()
-                
-                # compute loop
-                for rpath_gen, info in annotation:
-                    compute_kwargs = {
-                        'tensor_gen': self.cache['Gen'][rpath_gen],
-                        'tensor_ego': self.cache['Ego'][info['Ego']],
-                        'tensor_gt': self.cache['Exogt'][info['Exogt']],
-                        'pillow_ref': self.cache['Ref'][info['Ref']],
-                        'video_id': rpath_gen,
-                        'global_cache': self.cache,
-                        'metrics_to_compute': metrics_to_compute
-                    }
-                    res = evaluator.compute(**compute_kwargs)
-                    if rpath_gen not in results: results[rpath_gen] = {}
-                    results[rpath_gen][dimension] = res
-                    logging.info(f'A new result of {rpath_gen} in {dimension} is {results[rpath_gen][dimension]}!')
+            # 将 loader 传给 router
+            scores = self.router.compute_metric_with_loader(
+                metric_name=metric, 
+                submission=submission, 
+                dataloader=dataloader
+            )
             
-            except Exception as e:
-                logging.warning(f'UnImplemented dimension {dimension}!, {e}')
-                continue
-            finally:
-                # evaluator.clear()
-                self.cache = {
-                    'Gen': {},
-                    'Ego': {},
-                    'Exogt':  {},
-                    'Ref': {}
-                }
-        
-        with open(path_output, 'w') as f:
-            json.dump(results, f, indent=2)
-        f.close()
-    
-    def help():
-        pass
+            # 记录结果 (Dimensionrouter 返回 {vid: score} 或 float)
+            # Recorder.update 需要 (vid, dict)，我们需要适配一下
+            if isinstance(scores, dict):
+                # Case-level metrics
+                for vid, score in scores.items():
+                    recorder.update(vid, {metric: score})
+            else:
+                # Dataset-level metrics (e.g., FVD)
+                # Recorder 目前设计为 update(vid, metrics)，dataset level 可能需要特殊处理
+                # 这里简单将其记录在一个虚拟 ID 下，或者 Recorder 需要增加 add_global_metric 接口
+                # 暂时记录为 "Dataset_Global"
+                recorder.update("Dataset_Global", {metric: scores})
+
+        # 6. 保存报告
+        recorder.save_report()
+        logging.info(f"Evaluation complete. Results saved to {output_dir}")

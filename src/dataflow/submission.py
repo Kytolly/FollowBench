@@ -6,16 +6,19 @@ import numpy as np
 from pathlib import Path
 from torchvision import transforms
 from PIL import Image
+import yaml
 
+from configs import CONFIG
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 REQUIRED_META_KEYS = {'team_name', 'model_name', "modal", "mode", "contact"}
-TOTAL_CASES_NUM = 5 # 总共测试用例
-STANDARD_RESOLUTION = (240, 426) # (H, W)
-STANDARD_CLIP_LEN = 300 # 帧数要求
-STANDARD_CLIP_FPS = 60 # 帧率要求
 ALLOWED_EXTENSIONS = {'.mp4', '.avi', '.mov'}
+TOTAL_CASES_NUM = CONFIG['submission']['total_cases_num']
+STANDARD_RESOLUTION = (CONFIG['submission']['resolution_height'],
+                       CONFIG['submission']['resolution_width']) # (H, W)
+STANDARD_CLIP_LEN = CONFIG['submission']['clip_len']
+STANDARD_CLIP_FPS = CONFIG['submission']['clip_fps']
 
 class Submission:
     def __init__(   
