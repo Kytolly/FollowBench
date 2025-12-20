@@ -1,10 +1,8 @@
 import matplotlib.pyplot as plt
+import pandas as pd
 import json
 import numpy as np
-import matplotlib.pyplot as plt
-import pandas as pd
 from math import pi
-import utils
 
 metrics_names = [
     'Frechet Video Distance',
@@ -51,6 +49,46 @@ LOWER_IS_BETTER = [
     'TA',   # Trajectory Alignment (ADE 距离误差)
 ]    
 
+def load_and_merge_reports(report_paths):
+    """
+    读取多个 report.json 并合并为 DataFrame (Model x Metric)
+    """
+    data = {}
+    for path in report_paths:
+        with open(path, 'r') as f:
+            rpt = json.load(f)
+        
+        model_name = rpt['meta']['model_name']
+        model_scores = {}
+        
+        for key, val in rpt.items():
+            if key == 'meta': continue
+            
+            # 取平均值
+            if isinstance(val, dict):
+                score = np.mean(list(val.values()))
+            else:
+                score = float(val)
+                
+            model_scores[key] = score
+            
+        data[model_name] = model_scores
+        
+    return pd.DataFrame(data).T # Transpose: Rows=Models, Cols=Metrics
+
+def main_visualize(report_paths, output_img='radar_chart.png'):
+    df = load_and_merge_reports(report_paths)
+    
+    # 筛选只在 MAP 中存在的指标
+    valid_cols = [c for c in df.columns if c in METRIC_NAME_MAP]
+    df = df[valid_cols]
+    
+    # 归一化 (复用之前的 normalize_data 逻辑，需确保 df 结构一致)
+    # ... (此处调用 normalize_data) ...
+    df_norm = normalize_data(df) # 假设该函数已定义
+    
+    plot_radar_chart(df_norm)
+    
 def preprocess_data(raw_results):
     """
     将原始结果字典转换为 DataFrame 并处理特殊结构 (如 TA)
@@ -132,11 +170,3 @@ def plot_radar_chart(df_norm, title="Ego2Exo Benchmark Evaluation"):
     plt.savefig('benchmark_radar_chart.png', dpi=300)
     print("Radar chart saved as 'benchmark_radar_chart.png'")
     plt.show()
-    
-if __name__ == "__main__":
-    raw_data = utils.load_results('results.json')
-    df = preprocess_data(raw_data)
-    print("Original Data Summary:")
-    print(df)
-    df_norm = normalize_data(df)
-    plot_radar_chart(df_norm)

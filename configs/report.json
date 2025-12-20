@@ -1,0 +1,58 @@
+{
+    "meta": {
+        "team_name": "MyTeam",
+        "model_name": "EgoGen-V1",
+        "modal": "fullymodal",
+        "mode": "easy",
+        "contact": "email@example.com"
+    },
+    "AestheticQuality": {
+        "test-case-1001": 0.0,
+        "test-case-1002": 0.0
+    },
+    "AppearanceConsistency": {
+        "test-case-1001": 0.0,
+        "test-case-1002": 0.0
+    },
+    "BackgroundSemanticConsistency": {
+        "test-case-1001": 0.0,
+        "test-case-1002": 0.0
+    },
+    "CameraCenteringError": {
+        "test-case-1001": 0.0,
+        "test-case-1002": 0.0
+    },
+    "DynamicDegree": {
+        "test-case-1001": 0.0,
+        "test-case-1002": 0.0
+    },
+    "FrechetVideoDistance": 0.0,
+    "HumanActionAlignment": {
+        "test-case-1001": 0.0,
+        "test-case-1002": 0.0
+    },
+    "ImagingQuality": {
+        "test-case-1001": 0.0,
+        "test-case-1002": 0.0
+    },
+    "MotionSmoothness": {
+        "test-case-1001": 0.0,
+        "test-case-1002": 0.0
+    },
+    "OpticalFlowCorrelation": {
+        "test-case-1001": 0.0,
+        "test-case-1002": 0.0
+    },
+    "TemporalFlickering": {
+        "test-case-1001": 0.0,
+        "test-case-1002": 0.0
+    },
+    "TrajectoryAlignment": {
+        "test-case-1001": 0.0,
+        "test-case-1002": 0.0
+    },
+    "ViewpointValidity": {
+        "test-case-1001": 0.0,
+        "test-case-1002": 0.0
+    }
+}

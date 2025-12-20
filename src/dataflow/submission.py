@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 REQUIRED_META_KEYS = {'team_name', 'model_name', "modal", "mode", "contact"}
 TOTAL_CASES_NUM = 5 # 总共测试用例
-STANDARD_RESOLUTION = (256, 256) # (H, W)
+STANDARD_RESOLUTION = (240, 426) # (H, W)
 STANDARD_CLIP_LEN = 300 # 帧数要求
 STANDARD_CLIP_FPS = 60 # 帧率要求
 ALLOWED_EXTENSIONS = {'.mp4', '.avi', '.mov'}
@@ -113,9 +113,10 @@ class Submission:
         report.append(f"Summary: {valid_videos}/{total_videos} videos are valid.")
         full_report = "\n".join(report)
         return is_valid, full_report
+    
     def get_generated_video(self, video_id: str):
         """根据 ID 获取生成视频 Tensor [C, T, H, W]"""
-        video_path: Path = self.mapping[video_id]
+        video_path: Path = self.mapping[video_id]["generated video"]
         if not video_path.exists():
             logger.error(f"Video file missing for ID {video_id}: {video_path}")
             return None

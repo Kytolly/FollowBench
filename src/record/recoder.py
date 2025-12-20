@@ -1,46 +1,65 @@
 import os
-import pandas as pd
+import json
 import numpy as np
 from datetime import datetime
 
-class Recorder:
-    def __init__(self, output_dir):
+class Ego2ExoRecorder:
+    def __init__(self, team_name, model_name, output_dir, modal="fullymodal", mode="easy"):
+        self.meta = {
+            "team_name": team_name,
+            "model_name": model_name,
+            "modal": modal,
+            "mode": mode,
+            "contact": "N/A",
+            "timestamp": datetime.now().isoformat()
+        }
         self.output_dir = output_dir
         os.makedirs(output_dir, exist_ok=True)
-        self.records = [] # List of dicts
+        
+        # 内部存储结构: { MetricName: { CaseID: Score } }
+        self.results = {}
 
-    def update(self, video_id, metrics):
+    def add_case_score(self, case_id, scores_dict):
         """
-        Args:
-            video_id (str): 视频 ID
-            metrics (dict): { 'FID': 0.1, 'FVD': 100.0, ... }
+        添加单个 Case 的多个指标得分
+        scores_dict: {'AestheticQuality': 5.5, 'FVD': 120.3, ...}
         """
-        row = {'video_id': video_id}
-        row.update(metrics)
-        self.records.append(row)
+        for metric, score in scores_dict.items():
+            if metric not in self.results:
+                self.results[metric] = {}
+            
+            # 确保 score 是 Python float 类型 (非 Tensor/Numpy)
+            if isinstance(score, (np.float32, np.float64)):
+                score = float(score)
+            
+            self.results[metric][case_id] = score
 
-    def save_report(self):
-        if not self.records:
-            print("No records to save.")
-            return
+    def add_dataset_metric(self, metric_name, score):
+        """添加数据集级别的指标 (如 FVD)"""
+        if metric_name not in self.results:
+            self.results[metric_name] = score # 直接存值，而不是 dict
+        else:
+            self.results[metric_name] = score
 
-        df = pd.DataFrame(self.records)
+    def save_report(self, filename=None):
+        if filename is None:
+            filename = f"report_{self.meta['model_name']}.json"
         
-        # 1. 保存明细
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        detail_path = os.path.join(self.output_dir, f"report_detail_{timestamp}.csv")
-        df.to_csv(detail_path, index=False)
+        save_path = os.path.join(self.output_dir, filename)
         
-        # 2. 计算统计值 (Mean / Std)
-        # 排除非数值列
-        numeric_cols = df.select_dtypes(include=[np.number]).columns
-        stats = df[numeric_cols].agg(['mean', 'std'])
+        final_data = {
+            "meta": self.meta,
+            **self.results # 解包 metrics
+        }
         
-        summary_path = os.path.join(self.output_dir, f"report_summary_{timestamp}.csv")
-        stats.to_csv(summary_path)
+        with open(save_path, 'w', encoding='utf-8') as f:
+            json.dump(final_data, f, indent=4)
         
-        print("="*40)
-        print(f"Evaluation Complete. Report Saved to {self.output_dir}")
-        print("Summary:")
-        print(stats)
-        print("="*40)
+        print(f"Report saved to {save_path}")
+        return save_path
+
+    @staticmethod
+    def load_report(path):
+        with open(path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        return data
