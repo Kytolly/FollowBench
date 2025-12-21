@@ -2,6 +2,8 @@ import os
 import json
 import numpy as np
 from datetime import datetime
+import logging
+logger = logging.getLogger()
 
 class Recorder:
     def __init__(self, meta, output_dir):
@@ -48,16 +50,20 @@ class Recorder:
         # 2. 处理 Dataset-level 结果 (Scalar)
         elif isinstance(results, (np.floating, float, np.integer, int)):
             self.data[metric_name] = float(results)
-            
         else:
-            print(f"[Recorder] Warning: Unexpected result type for {metric_name}: {type(results)}")
+            logger.warning(f"Unexpected result type for {metric_name}: {type(results)}")
             self.data[metric_name] = results
 
-    def save_report(self, filename=None):
+    def save_report(self, filename:str=None):
         """
         将结果保存为符合 report.json 格式的文件
         """
-        if filename == None: filename = f'{self.record_time}_results.json'
+        if filename is None:
+            now = datetime.now()
+            timestamp_safe = now.strftime("%Y-%m-%d_%H-%M-%S")
+            filename = f"{timestamp_safe}_results.json"
+        else:
+            filename = filename.replace(':', '-')
         report_path = os.path.join(self.output_dir, filename)
         
         # 构造最终的 JSON 结构: meta 在最顶层，随后是各指标
@@ -69,8 +75,8 @@ class Recorder:
         try:
             with open(report_path, 'w', encoding='utf-8') as f:
                 json.dump(final_report, f, indent=4, ensure_ascii=False)
-            print(f"Evaluation Report saved to: {report_path}")
+            logger.info(f"Evaluation Report saved to: {report_path}")
         except Exception as e:
-            print(f"[Recorder] Error saving report: {e}")
+            logger.error(f"Error saving report: {e}")
             
         return report_path

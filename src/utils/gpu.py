@@ -1,6 +1,8 @@
 import pynvml
 import gc
 import torch
+import logging
+logger = logging.getLogger()
 
 def clear_gpu_memory(*args, **kwargs):
     '''强制清理显存'''
@@ -10,7 +12,7 @@ def clear_gpu_memory(*args, **kwargs):
         del model
     gc.collect()
     torch.cuda.empty_cache()
-    print("GPU Memory Cleared.")
+    logger.info("GPU Memory Cleared.")
 
 def get_free_gpu_ids(min_memory_free=96000, max_utilization=10):
     '''检测空闲显卡并返回以逗号分隔的 ID 字符串。

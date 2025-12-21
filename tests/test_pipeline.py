@@ -1,8 +1,18 @@
 import logging
+DETAILED_FORMAT = (
+    '%(asctime)s | '
+    '%(levelname)-s | '
+    '%(name)s | '
+    '%(filename)s:%(lineno)d | '
+    '%(funcName)s() | ' 
+    # 'PID:%(process)d | TID:%(thread)d | '
+    '%(message)s'
+)
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s [%(levelname)s] %(filename)s:%(funcName)s:%(lineno)d - %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S'
+    format=DETAILED_FORMAT,
+    datefmt='%Y-%m-%d %H:%M:%S',
+    force=True
 )
 
 from configs import CONFIG # 确保在测试环境
@@ -19,14 +29,8 @@ def get_submission():
         source_path=source_path,
         submission_path=sub_path
     )
-    is_valid, rep = submission.valid()
-    if is_valid:
-        logging.info('submmision accepted!')
-        return submission
-    else: 
-        logging.info(rep)
-        logging.warning('submission invalid!')
-        return None
+    submission.validate_all()
+    return submission
     
 def test_pipeline():
     submission = get_submission()

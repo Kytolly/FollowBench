@@ -3,6 +3,9 @@ import torch.nn.functional as F
 from torchvision import transforms
 from PIL import Image
 
+import logging
+logger = logging.getLogger(__name__)
+
 def load_image_to_gpu(image_path, device='cuda', target_size=None):
     """读取图片并直接转换为 Tensor [C, H, W]"""
     try:
@@ -12,7 +15,7 @@ def load_image_to_gpu(image_path, device='cuda', target_size=None):
         tensor = transforms.ToTensor()(img).to(device)
         return tensor
     except Exception as e:
-        print(f"Error loading image {image_path}: {e}")
+        logger.info(f"Error loading image {image_path}: {e}")
         return None
 
 def prepare_ref_embedding(dinov2_model, dino_transform, ref_img: Image, device='cpu'):
@@ -25,7 +28,7 @@ def prepare_ref_embedding(dinov2_model, dino_transform, ref_img: Image, device='
             ref_emb = dinov2_model(ref_input)
         return ref_emb
     except Exception as e:
-        print(f"Error loading Ref image: {e}")
+        logger.info(f"Error loading Ref image: {e}")
         return None
     
 def get_person_embedding_from_tensor(full_frame_tensor, box, dinov2_model, dino_transform):
@@ -50,7 +53,7 @@ def get_person_embedding_from_tensor(full_frame_tensor, box, dinov2_model, dino_
         return embedding
     except Exception as e:
         # Fallback for transforms that only accept PIL
-        print(f"Warning: Tensor transform failed, trying PIL fallback: {e}")
+        logger.info(f"Warning: Tensor transform failed, trying PIL fallback: {e}")
         return None
 
 def get_pose_vectors(image, model, device):

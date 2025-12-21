@@ -30,7 +30,6 @@ class Bench():
                  **kwargs):
         """
         Args:
-            submission_path: submission.json 的路径
             output_dir: 结果输出文件夹
             metrics_list: 需要计算的指标列表
         """

@@ -1,5 +1,8 @@
 import json
 import yaml
+import logging
+logger = logging.getLogger(__name__)
+
 import src.utils.utest as utest
 
 def save_results(results: dict, path):
@@ -13,7 +16,7 @@ def load_results(json_path='results.json'):
             data = json.load(f)
         return data
     except FileNotFoundError:
-        print(f"Error: {json_path} not found. Using dummy data for demonstration.")
+        logger.info(f"Error: {json_path} not found. Using dummy data for demonstration.")
         return utest.generate_dummy_data()
 
 def load_yaml_config(yaml_path):
@@ -22,7 +25,7 @@ def load_yaml_config(yaml_path):
             cfg = yaml.load(f)
         return cfg
     except FileNotFoundError:
-        print(f"Error: {yaml_path} not found.")
+        logger.info(f"Error: {yaml_path} not found.")
 
 def load_json_config(json_path):
     try:
@@ -30,4 +33,4 @@ def load_json_config(json_path):
             data = json.load(f)
         return data
     except FileNotFoundError:
-        print(f"Error: {json_path} not found.")
+        logger.info(f"Error: {json_path} not found.")

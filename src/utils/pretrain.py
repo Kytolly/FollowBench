@@ -1,5 +1,7 @@
-import logging
 import pyiqa
+import logging
+logger = logging.getLogger(__name__)
+
 import torch
 from torchvision import transforms
 from transformers import CLIPProcessor, CLIPModel
@@ -16,13 +18,13 @@ _MODEL_CACHE = {}
 
 def _get_cached_model(key, loader_func, *args, **kwargs):
     if key not in _MODEL_CACHE:
-        print(f"[System] Loading model into cache: {key} ...")
+        logger.info(f"Loading model into cache: {key} ...")
         _MODEL_CACHE[key] = loader_func(*args, **kwargs)
     return _MODEL_CACHE[key]
 
 def clear_models_cache():
     clear_gpu_memory(_MODEL_CACHE)
-    print("[System] Models cache cleared.")
+    logger.info("Models cache cleared.")
 
 def load_dinov2(device):
     def _loader():
@@ -73,7 +75,7 @@ def load_musiq(device):
             metric.eval()
             return metric
         except Exception as e:
-            print(f"Failed to load MUSIQ: {e}")
+            logger.info(f"Failed to load MUSIQ: {e}")
             return None
     return _get_cached_model(f"musiq_{device}", _loader)
     
@@ -84,7 +86,7 @@ def load_laion_aes_vit(device):
             metric.eval()
             return metric
         except Exception as e:
-            print(f"Failed to load LAION-AES: {e}")
+            logger.info(f"Failed to load LAION-AES: {e}")
             return None
     return _get_cached_model(f"laion_aes_{device}", _loader)
 

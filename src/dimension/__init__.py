@@ -13,6 +13,7 @@ from src.utils import gpu
 from src.utils.video_kit import extract_i3d_features
 from src.dimension.metric import FrechetVideoDistance
 from src.dataflow.set import BenchmarkDataset
+from src.dataflow.submission import Submission
 
 DIMENSION_NAMES = [
     'FrechetVideoDistance', 'AestheticQuality', 'ImagingQuality', 
@@ -154,7 +155,7 @@ class BenchRouter():
             
         return results
 
-    def _compute_fvd_with_loader(self, submission, dataloader):
+    def _compute_fvd_with_loader(self, submission: Submission, dataloader):
         """FVD 计算: 从 Loader 提取 GT 特征，从 Submission 提取 Gen 特征"""
         try:
             from src.dimension.fvd import FrechetVideoDistanceEvaluator
@@ -178,12 +179,13 @@ class BenchRouter():
             for batch in dataloader: all_ids.extend(batch['video_id'])
             
             for vid_id in tqdm(all_ids, desc="FVD: Extracting Gen Features"):
-                
                 gen_video = submission.get_generated_video(vid_id)
                 if gen_video is not None:
                     gen_video = gen_video.to(self.device)
                     feat = extract_i3d_features(gen_video, evaluator.model)
                     feats_gen.append(feat)
+                else:
+                    logger.error(f'fail to load {vid_id} mapping generated video as tensor.')
 
             if not feats_gen or not feats_gt:
                 return 0.0
