@@ -36,7 +36,7 @@ class TestLocalIntegration(unittest.TestCase):
         # 2. 扫描真实视频文件
         # 假设 assets/Test 下直接存放了 mp4 文件
         # 如果你的目录结构不同 (e.g. assets/Test/Third_Video/*.mp4)，请修改这里的 glob
-        video_files = list(cls.assets_root.glob("*.mp4"))
+        video_files = list(cls.assets_root.glob("test-case*/*.mp4"))
         
         if not video_files:
             # 如果没有文件，为了防止测试报错，生成一个 dummy 视频

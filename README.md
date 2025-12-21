@@ -166,3 +166,8 @@ If you find this project useful, please cite our work:
 This project is built upon [Wan](https://www.google.com/search?q=https://github.com/Wan-Video/Wan-Video) and utilizes ideas from [In-Context LoRA](https://arxiv.org/abs/2410.23775). We thank the community for their contributions.
 
 
+确保在测试环境 
+```
+$env:APP_ENV="test"; 
+export APP_ENV="test"
+```

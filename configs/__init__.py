@@ -2,6 +2,9 @@ import os
 import yaml
 from typing import Dict, Any
 from dotenv import load_dotenv
+import sys
+import torch
+
 
 load_dotenv()
 DEBUG = os.getenv("DEBUG", "False").lower() == "true"
@@ -26,4 +29,6 @@ def load_config(config_path: str = "configs/config.yml"):
     # 4. 返回对应环境的配置
     return all_configs[env]
 
+
+    
 CONFIG = load_config()

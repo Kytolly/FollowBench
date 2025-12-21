@@ -56,7 +56,8 @@ class Submission:
         
         # 验证映射长度
         if total_videos != TOTAL_CASES_NUM:
-            report.append(f"❌ [ID: {id}] File not found: {self.mapping[id]}")
+            report.append((f"❌ Submission's len({total_videos})"
+                            "donot match total cases number({TOTAL_CASES_NUM})!"))
             is_valid = False
             
         # 验证 meta
@@ -67,7 +68,7 @@ class Submission:
         
         # 验证映射文件中的每个视频
         for id, rpath in self.mapping.items():
-            self.mapping[id] = self.source / rpath
+            self.mapping[id] = self.source / rpath['generated video']
             # 检查文件是否存在
             if not self.mapping[id].exists():
                 report.append(f"❌ [ID: {id}] File not found: {self.mapping[id]}")

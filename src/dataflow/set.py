@@ -98,7 +98,7 @@ class BenchmarkDataset(Dataset):
             return self.transform(img) # [Fix] Apply transform
         except Exception as e:
             logging.error(f"Failed to load image {path}: {e}")
-            return torch.zeros(3, self.opt.load_size, self.opt.load_size)
+            return torch.zeros(3, self.opt.height, self.opt.width)
     
     def _load_video(self, rel_path):
         """读取视频 -> [T, C, H, W]"""
@@ -107,7 +107,7 @@ class BenchmarkDataset(Dataset):
             return load_video_to_gpu(path, device='cpu') 
         except Exception as e:
             logging.error(f"Failed to load video {path}: {e}")
-            return torch.zeros(self.opt.clip_len, 3, self.opt.load_size, self.opt.load_size)
+            return torch.zeros(self.opt.clip_len, 3, self.opt.height, self.opt.width)
 
     def __len__(self):
         return len(self.ids)

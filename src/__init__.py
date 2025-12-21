@@ -21,8 +21,7 @@ class Bench():
         self.router = BenchRouter(device, assets_root)
 
     def evaluate(self, 
-                 source_path: str,
-                 submission_path: str, 
+                 submission: Submission, 
                  output_dir: str = 'output/',
                  metrics_list: list = None,
                  batch_size: int = 1,
@@ -37,15 +36,8 @@ class Bench():
         """
         if metrics_list is None:
             metrics_list = DIMENSION_NAMES
-
-        # 1. 加载 Submission
-        logging.info(f"Loading submission from {submission_path}")
-        submission = Submission(
-            source_path=source_path,
-            submission_path=submission_path
-        )
         
-        # 2. 准备 Dataflow Options
+        # 准备 Dataflow Options
         meta = submission.meta_info
         anno_path = kwargs.get('annotation_path', self.assets_root / 'annotation.json')
         # caption_path = kwargs.get('caption_path', self.assets_root / 'annotation.json')
@@ -62,7 +54,7 @@ class Bench():
             clip_len=300   # 默认帧数
         )
         
-        # 3. 初始化 DataLoader
+        # 初始化 DataLoader
         # 这将自动加载 GT 和 Ego 视频，无需手动传路径
         logging.info(f"Initializing DataLoader with annotation: {opt.annotation}")
         try:
