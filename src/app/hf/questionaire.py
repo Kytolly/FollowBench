@@ -1,174 +1,107 @@
 import gradio as gr
 import json
-import random
-import os
-import time
-import uuid
-from pathlib import Path
-from huggingface_hub import HfApi, upload_file
-from filelock import FileLock
+from functools import partial
 
-from src.questionaire.feedback import FeedbackSaver
-from src.questionaire.blind_study import BlindStudyLoader
+from src.utils.hf import handle_next, handle_submit
+from src.questionaire.loader import DatasetLoader
+from src.questionaire.blind_study import BlindStudyEngine
+from src.questionaire.collector import FeedbackCollector
 from src.questionaire import (
     STYLE_PATH,
     FEEDBACK_PATH,
+    ASSETS_DIR,
+    HF_TOKEN,
+    FEEDBACK_REPO
 )
 
-saver = FeedbackSaver(FEEDBACK_PATH)
-loader = BlindStudyLoader()
+loader = DatasetLoader(ASSETS_DIR) # 数据加载器
+engine = BlindStudyEngine(loader) # 业务逻辑引擎
+collector = FeedbackCollector(FEEDBACK_PATH, HF_TOKEN, FEEDBACK_REPO) # 数据收集器
 
-def load_style_config():
+def load_questions():
+    """读取 UI 配置文件"""
     if STYLE_PATH.exists():
         with open(STYLE_PATH, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    return {"meta": {}, "questions": []}
+            return json.load(f).get("questions", [])
+    return []
 
 def create_questionaire_tab():
-    style = load_style_config()
-    questions = style.get("questions", [])
+    questions = load_questions()
     
     with gr.TabItem("🙋 User Study (Blind Test)"):
-        gr.Markdown("### ⚔️ Blind A/B Testing")
-        gr.Markdown("请观看第一人称输入 (Ego Input)，对比下方两个视频 (Video A vs Video B)，并选出更好的一方。**注意：A 和 B 的顺序是随机的。**")
+        gr.Markdown("### ⚔️ Blind A/B Testing System")
         
-        # --- 视频展示区 ---
+        # --- 1. 视频展示区域 ---
         with gr.Row():
             with gr.Column():
-                gr.Markdown("#### 👁️ Ego Input")
-                ego_video = gr.Video(label="Input", interactive=False, height=300)
-            
+                gr.Markdown("#### 👁️ Input (Ego)")
+                ego_video = gr.Video(label="Ego View", interactive=False, height=320)
             with gr.Column():
                 gr.Markdown("#### 🅰️ Video A")
-                video_a = gr.Video(label="Model A", interactive=False, height=300)
-                
+                video_a = gr.Video(label="Option A", interactive=False, height=320)
             with gr.Column():
                 gr.Markdown("#### 🅱️ Video B")
-                video_b = gr.Video(label="Model B", interactive=False, height=300)
+                video_b = gr.Video(label="Option B", interactive=False, height=320)
 
-        # 隐藏状态：存储当前 A/B 到底对应哪个模型
+        # 隐藏状态：存储本轮的加密元数据
         state_meta = gr.State()
 
-        gr.Markdown("---")
-        
-        # --- 动态问卷区 ---
-        input_radios = []
-        q_ids = []
+        # --- 2. 动态问题区域 ---
+        input_components = [] # 存储 Radio 组件对象
+        question_ids = []     # 存储问题 ID 字符串
         
         for q in questions:
-            q_ids.append(q['id'])
+            question_ids.append(q['id'])
             with gr.Group():
                 gr.Markdown(f"**{q['text']}**")
-                if 'criteria' in q:
-                    gr.Markdown(f"_{q['criteria']}_")
-                
-                # 选项处理
                 choices = []
                 for opt in q['options']:
-                    # 兼容 style.json 中的 dict 或 string
                     if isinstance(opt, dict):
                         choices.append((opt['label'], opt['value']))
                     else:
                         choices.append(str(opt))
                 
-                radio = gr.Radio(
-                    choices=choices,
-                    label=q.get('prompt', 'Choose one'),
-                    interactive=True
-                )
-                input_radios.append(radio)
-        
-        # --- 按钮区 ---
+                radio = gr.Radio(choices=choices, label=q.get('prompt', ''), interactive=True)
+                input_components.append(radio)
+
+        # --- 3. 控制按钮区域 ---
         with gr.Row():
-            skip_btn = gr.Button("🎲 Skip / Next Case")
-            submit_btn = gr.Button("✅ Submit & Next", variant="primary")
+            skip_btn = gr.Button("🎲 Skip / Start", scale=1)
+            submit_btn = gr.Button("✅ Submit & Next", variant="primary", scale=2)
         
-        status_log = gr.Textbox(label="System Log", lines=1, interactive=False)
+        status_log = gr.Textbox(label="Status", interactive=False, lines=1)
 
-        # ================= 逻辑函数 =================
+        # ================= 事件绑定 (Controller Binding) =================
         
-        def next_case():
-            """加载下一个随机 Case"""
-            ego, va, vb, meta = loader.get_blind_pair()
-            if not meta:
-                return None, None, None, None, "⚠️ No valid cases found in assets/Test."
-            
-            # 清空所有单选框
-            updates = [gr.update(value=None) for _ in input_radios]
-            return (ego, va, vb, meta, "🆕 New case loaded.") + tuple(updates)
+        # 定义所有受影响的 UI 输出
+        # 注意：顺序必须与 hf.py 中函数的 return 顺序一致
+        # (ego, va, vb, meta, log, *radios)
+        ui_outputs = [ego_video, video_a, video_b, state_meta, status_log] + input_components
 
-        def submit_and_next(meta, *answers):
-            """处理提交并加载下一个"""
-            if not meta:
-                return (None, None, None, None, "⚠️ Error: No active case loaded.") + tuple([gr.update()]*len(answers))
-            
-            if None in answers:
-                # 还有未完成的问题
-                return (gr.update(), gr.update(), gr.update(), meta, "❌ Please answer all questions before submitting.") + tuple([gr.update()]*len(answers))
-
-            # 1. 解析答案
-            # 这里的 logic 是为了生成 analyzer.py 能用的数据格式
-            # 我们需要保存: model_a, model_b, winner
-            # mapping: {"a": "ModelName1", "b": "ModelName2"}
-            mapping = meta["mapping"]
-            
-            records = []
-            session_uuid = str(uuid.uuid4())
-            
-            for q_id, choice_val in zip(q_ids, answers):
-                # choice_val 应该是 'a', 'b', 或 'tie'
-                if choice_val == 'a':
-                    winner = mapping['a']
-                    loser = mapping['b']
-                    result_flag = 'model_a' # 对 analyzer 来说, winner 是 model_a
-                elif choice_val == 'b':
-                    winner = mapping['b']
-                    loser = mapping['a']
-                    result_flag = 'model_b'
-                else:
-                    winner = 'tie'
-                    loser = 'tie'
-                    result_flag = 'tie'
-                
-                record = {
-                    "uuid": session_uuid,
-                    "case_id": meta["case_id"],
-                    "question_id": q_id,
-                    "model_a": mapping['a'], # 记录实际模型名
-                    "model_b": mapping['b'],
-                    "choice": choice_val,    # 用户选了左还是右
-                    "winner": winner,        # 胜出的模型名
-                    "timestamp": time.time()
-                }
-                records.append(record)
-            
-            # 2. 保存
-            msg = saver.save_vote(records)
-            
-            # 3. 加载下一个
-            ego, va, vb, new_meta = loader.get_blind_pair()
-            
-            # 重置 UI
-            updates = [gr.update(value=None) for _ in input_radios]
-            
-            return (ego, va, vb, new_meta, f"{msg} Loading next...") + tuple(updates)
-
-        # ================= 事件绑定 =================
-        
-        # 页面加载时自动来一个
-        # 注意：Gradio Tab 加载时触发需要用 load，这里用 demo.load 或者由用户点击 Start，
-        # 为了简单，我们绑定 Skip 按钮作为 Start，且让 State 初始为空
-        
-        outputs_list = [ego_video, video_a, video_b, state_meta, status_log] + input_radios
+        # A. 绑定 Skip/Next 事件
+        # 使用 partial 将 engine 和 input_components 注入到 handle_next
+        # 这样 Gradio 调用时只需要触发，不需要传参
+        bound_next = partial(handle_next, engine=engine, radio_list=input_components)
         
         skip_btn.click(
-            fn=next_case,
+            fn=bound_next,
             inputs=[],
-            outputs=outputs_list
+            outputs=ui_outputs
+        )
+
+        # B. 绑定 Submit 事件
+        # 使用 partial 注入固定依赖 (engine, collector, question_ids, input_components)
+        # Gradio 会自动传入 inputs 列表中定义的值 (state_meta + radio values) 给剩下的参数
+        bound_submit = partial(
+            handle_submit, 
+            engine=engine, 
+            collector=collector, 
+            question_ids=question_ids, 
+            radio_list=input_components
         )
         
         submit_btn.click(
-            fn=submit_and_next,
-            inputs=[state_meta] + input_radios,
-            outputs=outputs_list
+            fn=bound_submit,
+            inputs=[state_meta] + input_components, # 这里的值会传给 meta 和 *answers
+            outputs=ui_outputs
         )
