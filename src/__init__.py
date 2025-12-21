@@ -39,8 +39,8 @@ class Bench():
         
         # 准备 Dataflow Options
         meta = submission.meta_info
-        anno_path = kwargs.get('annotation_path', self.assets_root / 'annotation.json')
-        # caption_path = kwargs.get('caption_path', self.assets_root / 'annotation.json')
+        anno_path = kwargs.get('annotation_path', self.assets_root / 'test/annotation.json')
+        # caption_path = kwargs.get('caption_path', self.assets_root / 'train/annotation.json')
         opt = Options(
             assets=str(self.assets_root),
             annotation=str(anno_path),

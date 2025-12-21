@@ -64,7 +64,7 @@ def load_video_as_tensor(video_path):
     tensor = tensor.permute(0, 3, 1, 2).float() / 255.0
     return tensor
 
-def load_video_to_gpu(video_path, target_size=None, device='cuda'):
+def load_video_to_device(video_path, target_size=None, device='cuda'):
     """读取视频并直接转换为 GPU Tensor [T, C, H, W]"""
     cap = cv2.VideoCapture(str(video_path))
     frames = []
@@ -75,7 +75,6 @@ def load_video_to_gpu(video_path, target_size=None, device='cuda'):
         if not ret: break
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         if target_size is not None:
-            # 如果显存紧张，可以在这里 resize成 (244, 244)
             frame = cv2.resize(frame, (target_size[1], target_size[0]))
         frames.append(frame)
         count += 1
@@ -134,3 +133,60 @@ def extract_i3d_features(video_tensor: Tensor, i3d_model):
     with torch.no_grad():
         features = i3d_model(video_input) # [1, D]
     return features.cpu().numpy()
+
+def inspect_video(video_path):
+    """
+    检查视频完整性并返回属性。
+    Returns:
+        dict: {'width', 'height', 'fps', 'frame_count'} or None if invalid
+    """
+    cap = cv2.VideoCapture(str(video_path))
+    if not cap.isOpened():
+        return None
+    
+    try:
+        width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        fps = cap.get(cv2.CAP_PROP_FPS)
+        frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        
+        return {
+            'width': width,
+            'height': height,
+            'fps': fps,
+            'frame_count': frame_count
+        }
+    finally:
+        cap.release()
+
+def validate_video_properties(video_path, standard_res, standard_fps, standard_len):
+    """
+    根据标准校验视频属性。
+    Args:
+        video_path: 视频路径
+        standard_res: (H, W)
+        standard_fps: float
+        standard_len: int
+    Returns:
+        list[str]: 错误信息列表。为空表示校验通过。
+    """
+    props = inspect_video(video_path)
+    if props is None:
+        return ["Failed to open or corrupted video file."]
+    
+    errors = []
+    
+    # 1. Resolution Check (H, W)
+    std_h, std_w = standard_res
+    if (props['height'], props['width']) != (std_h, std_w):
+        errors.append(f"Resolution mismatch: Got {props['width']}x{props['height']}, expected {std_w}x{std_h}")
+        
+    # 2. FPS Check (Allow small float error)
+    if abs(props['fps'] - standard_fps) > 0.1:
+        errors.append(f"FPS mismatch: Got {props['fps']:.2f}, expected {standard_fps}")
+        
+    # 3. Frame Count Check
+    if props['frame_count'] != standard_len:
+        errors.append(f"Frame count mismatch: Got {props['frame_count']}, expected {standard_len}")
+        
+    return errors

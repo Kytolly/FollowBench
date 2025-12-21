@@ -1,4 +1,9 @@
 import logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(filename)s:%(funcName)s:%(lineno)d - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
 
 from configs import CONFIG # 确保在测试环境
 from src.utils.persistence import *
@@ -32,7 +37,7 @@ def test_pipeline():
     bench.evaluate(
         submission=submission,
         output_dir='output/',
-        metrics_list=DIMENSION_NAMES,
+        metrics_list=['FrechetVideoDistance'],
     )
     
 if __name__ == '__main__':

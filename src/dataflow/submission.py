@@ -1,149 +1,129 @@
 import json
-import torch
 import cv2
-import logging
 import numpy as np
 from pathlib import Path
-from torchvision import transforms
-from PIL import Image
-import yaml
-
-from configs import CONFIG
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+from typing import Union
+import logging
 logger = logging.getLogger(__name__)
 
-REQUIRED_META_KEYS = {'team_name', 'model_name', "modal", "mode", "contact"}
-ALLOWED_EXTENSIONS = {'.mp4', '.avi', '.mov'}
-TOTAL_CASES_NUM = CONFIG['submission']['total_cases_num']
-STANDARD_RESOLUTION = (CONFIG['submission']['resolution_height'],
-                       CONFIG['submission']['resolution_width']) # (H, W)
-STANDARD_CLIP_LEN = CONFIG['submission']['clip_len']
-STANDARD_CLIP_FPS = CONFIG['submission']['clip_fps']
+from src.utils.video_kit import (
+    load_video_to_device,
+    validate_video_properties
+)
+from . import (
+    REQUIRED_META_KEYS,
+    ALLOWED_EXTENSIONS,
+    TOTAL_CASES_NUM,
+    STANDARD_RESOLUTION,
+    STANDARD_CLIP_LEN,
+    STANDARD_CLIP_FPS,
+)
 
 class Submission:
-    def __init__(   
-            self, 
-            source_path, # 解压后生成视频源文件夹 
-            submission_path, # 文件映射说明文件
-        ):
+    """
+    专门负责 Submission 数据的 IO 和 Tensor 转换。
+    它作为一个只读的 Data Mapping 将 Video ID 映射为显存中的 Video Tensor。
+    """
+    def __init__(self,
+                 submission_path: Union[str, Path],
+                 source_path: Union[str, Path],
+                 device: str = 'cpu'):
+        """
+        Args:
+            submission_path: submission.json 的路径
+            source_path: 生成视频所在的根目录 (所有相对路径均基于此)
+            device: 预加载的设备
+        """
+        self.device = device
+        self.source_path = Path(source_path)
+        self.submission_path = Path(submission_path)
         self.meta_info = {}
         self.mapping = {}
-        self._load(source_path, submission_path)
-
-    def _load(self, source_path, submission_path):
-        """包含 meta 和 results"""
-        logger.info(f"Loading submission map from JSON: {submission_path}")
-        if not Path(submission_path).exists(): # 文件映射说明文件
-            raise FileNotFoundError(f"Path not found at {submission_path}.")
-        logger.info(f"Loading submission from directory: {source_path}")
-        self.source = Path(source_path) 
-        if not self.source.exists():
-            raise FileNotFoundError(f"Source path not found at {source_path}.")
-        with open(Path(submission_path), 'r') as f:
-            data = json.load(f)
-        f.close()
-        if 'results' not in data and 'meta' not in data:
-            raise ValueError("JSON must contain 'meta' and 'results' keys.")
-        self.meta_info = data['meta']
-        self.mapping = data['results']
-        
-    def valid(self):
-        """判断映射后的生成视频文件是否合法"""
-        report = []
-        is_valid = True
-        valid_videos = 0
-        total_videos = len(self.mapping)
-        
-        # 验证映射长度
-        if total_videos != TOTAL_CASES_NUM:
-            report.append((f"❌ Submission's len({total_videos})"
-                            "donot match total cases number({TOTAL_CASES_NUM})!"))
-            is_valid = False
-            
-        # 验证 meta
-        missing_meta = REQUIRED_META_KEYS - self.meta_info.keys()
-        if missing_meta:
-            return False, f"Missing keys in 'meta': {missing_meta}"
-        report.append(f"✅ Metadata verified: {self.meta_info['team_name']}")
-        
-        # 验证映射文件中的每个视频
-        for id, rpath in self.mapping.items():
-            self.mapping[id] = self.source / rpath['generated video']
-            # 检查文件是否存在
-            if not self.mapping[id].exists():
-                report.append(f"❌ [ID: {id}] File not found: {self.mapping[id]}")
-                is_valid = False
-                continue
-            
-            # 检查是否是支持的编码格式
-            if self.mapping[id].suffix not in ALLOWED_EXTENSIONS:
-                report.append(f"❌ [ID: {id}] Unsupported file format: {self.mapping[id].suffix}")
-                is_valid = False
-                continue
-            
-            # 检查视频完整性
-            cap = cv2.VideoCapture(self.mapping[id])
-            if not cap.isOpened():
-                report.append(f"❌ [ID: {id}] Cannot open video file.")
-                is_valid = False
-                continue
-            
-            width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-            height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-            frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-            fps = int(cap.get(cv2.CAP_PROP_FPS))
-            cap.release()
-            
-            # 检查分辨率
-            error_msgs = []
-            if width != STANDARD_RESOLUTION[1] or \
-               height != STANDARD_RESOLUTION[0]: 
-                error_msgs.append(f"Resolution {width}x{height} != {STANDARD_RESOLUTION}")
-                
-            # 帧数检查
-            if frame_count != STANDARD_CLIP_LEN:
-                error_msgs.append(f"Too short: {frame_count} frames < {STANDARD_CLIP_LEN}")
-                
-            # FPS 检查
-            if fps != STANDARD_CLIP_FPS:
-                error_msgs.append(f"FPS {fps} != {STANDARD_CLIP_FPS}")
-            
-            if error_msgs:
-                report.append(f"⚠️ [ID: {id}] Issues: {'; '.join(error_msgs)}")
-                is_valid = False
-            else:
-                valid_videos += 1
-
-        report.append(f"Summary: {valid_videos}/{total_videos} videos are valid.")
-        full_report = "\n".join(report)
-        return is_valid, full_report
+        self._load()
     
-    def get_generated_video(self, video_id: str):
-        """根据 ID 获取生成视频 Tensor [C, T, H, W]"""
-        video_path: Path = self.mapping[video_id]["generated video"]
-        if not video_path.exists():
-            logger.error(f"Video file missing for ID {video_id}: {video_path}")
-            return None
-        return self._read_video(str(video_path))
+    def _load(self):
+        """加载 JSON 并解析 meta/results"""
+        if not self.submission_path.exists():
+            raise FileNotFoundError(f"Submission file not found: {self.submission_path}")
+        if not self.source_path.exists():
+            logger.warning(f"Source path root not found: {self.source_path}")
 
-    def _read_video(self, path):
-        """读取视频并转换为 Tensor"""
-        cap = cv2.VideoCapture(path)
-        if not cap.isOpened():
-            logger.error(f"Failed to open video: {path}")
-            return None
-
-        frames = []
         try:
-            while len(frames) < self.clip_len:
-                ret, frame = cap.read()
-                if not ret: break
-                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                frame = Image.fromarray(frame)
-                frames.append(self.transform(frame))
-        finally:
-            cap.release()
+            with open(self.submission_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+        except json.JSONDecodeError as e:
+            raise ValueError(f"Invalid JSON format: {e}")
+
+        self.meta_info = data.get('meta', {})
+        self.mapping = data.get('results', {})
+        logger.info(f"Loaded submission with {len(self.mapping)} cases.")
         
-        if not frames: 
+    def validate_all(self):
+        """执行全量检查 Meta, 数量, 每个视频的物理属性"""
+        errors = []
+
+        # A. Meta Check
+        missing = REQUIRED_META_KEYS - self.meta_info.keys()
+        if missing:
+            errors.append(f"[Meta] Missing keys: {missing}")
+
+        # B. Count Check
+        if len(self.mapping) != TOTAL_CASES_NUM:
+            errors.append(f"[Count] Expected {TOTAL_CASES_NUM} cases, found {len(self.mapping)}")
+
+        # C. Per-Case Check
+        for case_id, entry in self.mapping.items():
+            # 1. Structure
+            if not isinstance(entry, dict) or "generated video" not in entry:
+                errors.append(f"[{case_id}] Missing 'generated video' key.")
+                continue
+                
+            rel_path = entry["generated video"]
+            full_path = self.source_path / rel_path
+            
+            # 2. Existence
+            if not full_path.exists():
+                errors.append(f"[{case_id}] File not found: {full_path}")
+                continue
+                
+            # 3. Extension
+            if full_path.suffix.lower() not in ALLOWED_EXTENSIONS:
+                errors.append(f"[{case_id}] Invalid extension: {full_path.suffix}")
+                
+            # 4. Video Properties (调用 video_kit)
+            vid_errors = validate_video_properties(
+                full_path, 
+                STANDARD_RESOLUTION, 
+                STANDARD_CLIP_FPS, 
+                STANDARD_CLIP_LEN
+            )
+            if vid_errors:
+                errors.append(f"[{case_id}] Properties Invalid: {'; '.join(vid_errors)}")
+
+        if errors:
+            msg = f"Submission Validation Failed with {len(errors)} errors:\n" + "\n".join(errors[:20])
+            if len(errors) > 20: msg += f"\n...and {len(errors)-20} more."
+            raise ValueError(msg)
+            
+        logger.info("✅ Submission validation passed successfully.")
+        
+    def get_generated_video(self, video_id: str):
+        """
+        核心 IO 方法：获取指定 ID 的视频 Tensor。
+        
+        Returns:
+            torch.Tensor: Shape [T, C, H, W] (归一化到 0-1 或标准化，取决于 load_video_to_gpu)
+            None: 如果文件不存在或加载失败
+        """
+        video_path = self._resolve_path(video_id)
+        if video_path is None:
             return None
-        return torch.stack(frames) # Current: [T, C, H, W]
+        entry = self.mapping[video_id]
+        rel_path = entry["generated video"]
+        video_path = self.source_path / rel_path
+        try:
+            video_tensor = load_video_to_device(str(video_path), device=self.device)
+            return video_tensor
+        except Exception as e:
+            logger.error(f"Failed to load video {video_path}: {e}")
+            return None

@@ -1,9 +1,10 @@
-import logging
 import importlib
 import numpy as np
 import gc
 from pathlib import Path
 from tqdm import tqdm
+import logging
+logger = logging.getLogger(__name__)
 
 import torch
 from torchvision.transforms.functional import to_pil_image
@@ -30,7 +31,7 @@ class DimensionEvaluator():
         self.model = None
         
     def prepare(self):
-        logging.info(f"{self.__class__.__name__} prepared!")
+        logger.info(f"{self.__class__.__name__} prepared!")
     
     def compute(self, **kwargs):
         raise NotImplementedError
@@ -67,12 +68,12 @@ class BenchRouter():
             module = importlib.import_module(module_name)
             for cls_name in possible_classes:
                 if hasattr(module, cls_name):
-                    logging.info(f"Loaded {cls_name} from {module_name}")
+                    logger.info(f"Loaded {cls_name} from {module_name}")
                     return getattr(module, cls_name)(self.device)
-            logging.warning(f"Class not found for {metric_name} in {module_name}")
+            logger.warning(f"Class not found for {metric_name} in {module_name}")
             return None
         except Exception as e:
-            logging.error(f"Failed to load module {module_name}: {e}")
+            logger.error(f"Failed to load module {module_name}: {e}")
             return None
 
     def compute_metric_with_loader(self, 
@@ -144,7 +145,7 @@ class BenchRouter():
                     del tensor_gen
 
         except Exception as e:
-            logging.error(f"Error computing {full_name}: {e}")
+            logger.error(f"Error computing {full_name}: {e}")
             import traceback; traceback.print_exc()
         finally:
             evaluator.clear()
@@ -177,6 +178,7 @@ class BenchRouter():
             for batch in dataloader: all_ids.extend(batch['video_id'])
             
             for vid_id in tqdm(all_ids, desc="FVD: Extracting Gen Features"):
+                
                 gen_video = submission.get_generated_video(vid_id)
                 if gen_video is not None:
                     gen_video = gen_video.to(self.device)
@@ -191,7 +193,7 @@ class BenchRouter():
             return FrechetVideoDistance(feats_gen, feats_gt)
 
         except Exception as e:
-            logging.error(f"FVD Error: {e}")
+            logger.error(f"FVD Error: {e}")
             return 0.0
         finally:
             if 'evaluator' in locals(): evaluator.clear()

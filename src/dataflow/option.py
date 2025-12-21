@@ -5,8 +5,8 @@ from configs import CONFIG
 class Options:
     repo_id:        str  = "Kytolly/examples_Ego2ExoFollowCamera" # HuggingFace 仓库 ID
     assets:         str  = "assets/"                              # 数据集本地根目录
-    caption:        str  = "assets/caption.json"                  # 用于训练的 caption
-    annotation:     str  = "assets/annotation.json"               # 用于测试的 annotation
+    caption:        str  = "assets/train/caption.json"            # 用于训练的 caption
+    annotation:     str  = "assets/test/annotation.json"          # 用于测试的 annotation
     phase:          str  = "test"                                 # train | test
     modal:          str  = "vace_instruct"                        # t2v_generic | i2v_generic | vace_instruct | other
     mode:           str  = "easy"                                 # easy | medium | hard       
