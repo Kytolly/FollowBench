@@ -1,44 +1,6 @@
 import gradio as gr
-import os
-import pandas as pd
-import shutil
-from pathlib import Path
-from huggingface_hub import HfApi
 
-def handle_submit(team, model, file_obj, hf_token, repo_id, output_dir):
-    if file_obj is None:
-        return "⚠️ Please upload a valid JSON file."
-    
-    # 本地保存
-    timestamp = pd.Timestamp.now().strftime("%Y%m%d_%H%M%S")
-    safe_name = "".join([c for c in model if c.isalnum() or c in "-_"])
-    filename = f"{timestamp}_{safe_name}_report.json"
-    
-    save_path = Path(output_dir) / filename
-    try:
-        shutil.copy(file_obj.name, save_path)
-        msg = f"✅ Saved locally: {filename}"
-    except Exception as e:
-        return f"❌ Local Save Failed: {e}"
-
-    # 云端推送
-    if hf_token and repo_id:
-        try:
-            api = HfApi(token=hf_token)
-            api.upload_file(
-                path_or_fileobj=save_path,
-                path_in_repo=f"submissions/{filename}",
-                repo_id=repo_id,
-                repo_type="dataset",
-                commit_message=f"Submission: {model} by {team}"
-            )
-            msg += "\n🚀 Pushed to Hugging Face Dataset!"
-        except Exception as e:
-            msg += f"\n Cloud Upload Failed: {e}"
-    else:
-        msg += "\n(Cloud upload skipped: HF_TOKEN not set)"
-        
-    return msg
+from src.utils.hf import handle_submit
 
 def create_submission_tab(hf_token, submission_repo, output_dir):
     with gr.TabItem("📤 Submission"):

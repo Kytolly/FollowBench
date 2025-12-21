@@ -214,3 +214,4 @@ configs/config.yml
 .env
 .env.*
 !.env.example 
+.VSCodeCounter/

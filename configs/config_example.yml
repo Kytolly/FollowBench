@@ -1,0 +1,20 @@
+test:
+  repo_id:
+  repo_feeaback_id: 
+  repo_submission_id:
+  path_assets:
+  rules:
+    clip_len:
+    fps:
+    resolution_height:
+    resolution_width:
+  submission:
+    submission_path:
+    source_path:
+    total_cases_num:
+    resolution_height:
+    resolution_width:
+    clip_fps:
+    clip_len:
+prod:
+dev:

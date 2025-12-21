@@ -1,5 +1,5 @@
 import pandas as pd
-from .analysis import BenchmarkAnalyzer
+from .analysis import Analyzer
 
 # 定义指标方向 (True: Higher is Better, False: Lower is Better)
 METRIC_DIRECTION = {
@@ -20,7 +20,7 @@ METRIC_DIRECTION = {
 
 class RankBoard:
     def __init__(self, report_paths):
-        self.analyzer = BenchmarkAnalyzer(report_paths)
+        self.analyzer = Analyzer(report_paths)
         
     def generate_rank(self, output_csv="leaderboard.csv"):
         df_stats = self.analyzer.get_metric_stats()

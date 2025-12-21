@@ -1,7 +1,4 @@
 import gradio as gr
-import os
-import pandas as pd
-from pathlib import Path
 
 from configs import CONFIG
 from src.app.hf.leaderboard import create_leaderboard_tab
@@ -11,13 +8,13 @@ from src.app.hf.questionaire import create_questionaire_tab
 from src.app.hf.about import create_about_tab
 from src.app.hf.citation import create_citation_tab
 
-# 配置
-RESULT_DIR = Path("output")
-ASSETS_DIR = Path("assets")
-CONFIG_DIR = Path("configs")
-RESULT_DIR.mkdir(exist_ok=True)
-HF_TOKEN = os.environ.get("HF_TOKEN")
-SUBMISSION_REPO = CONFIG['']
+from . import (
+    RESULT_DIR,
+    ASSETS_DIR,
+    CONFIG_DIR,
+    HF_TOKEN,
+    SUBMISSION_REPO,
+)
 
 def main():
     with gr.Blocks(title="Ego2Exo Benchmark", theme=gr.themes.Soft()) as demo:
