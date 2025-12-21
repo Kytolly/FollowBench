@@ -1,5 +1,6 @@
 from huggingface_hub import upload_file
 import pandas as pd
+
 def push_to_hub(csv_path):
     """将本地的 leaderboard.csv 推送到 Hugging Face Space"""
     print("Pushing leaderboard to Hugging Face Space...")

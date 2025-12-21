@@ -1,1 +1,0 @@
-python baselines/CogVideoX-5b-I2V/inference.py

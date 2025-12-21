@@ -209,6 +209,7 @@ __marimo__/
 assets/
 cache/
 library/ 
+output/
 configs/config.yml
 .env
 .env.*

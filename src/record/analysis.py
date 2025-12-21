@@ -3,7 +3,7 @@ import numpy as np
 import json
 import os
 
-class BenchmarkAnalyzer:
+class Analyzer:
     def __init__(self, report_paths):
         """
         Args:

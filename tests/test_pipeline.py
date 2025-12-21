@@ -41,7 +41,11 @@ def test_pipeline():
     bench.evaluate(
         submission=submission,
         output_dir='output/',
-        metrics_list=['FrechetVideoDistance'],
+        metrics_list=[
+            'FrechetVideoDistance', 
+            'AestheticQuality', 
+            'ImagingQuality', 
+            ],
     )
     
 if __name__ == '__main__':
