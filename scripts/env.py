@@ -3,7 +3,7 @@ from pathlib import Path
 
 import torch
 
-from src.utils.gpu import get_free_gpu_ids
+from ego2exo_bench.utils.gpu import get_free_gpu_ids
 
 def print_env():
     print("Python Version:", sys.version)

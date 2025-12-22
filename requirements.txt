@@ -52,7 +52,7 @@ fastjsonschema==2.21.2
 ffmpy==1.0.0
 filelock==3.19.1
 filterpy==1.4.5
-flash-attn @ file:///opt/liblibai-models/user-workspace2/users/xqy/project/Ego2ExowithMotion/lib/flash_attn-2.7.3%2Bcu12torch2.5cxx11abiFALSE-cp310-cp310-linux_x86_64.whl#sha256=cd0ead6ad92bff21f90cf0aecdf859bc7145bf4e7dc8ed1fdc3cc38299651ce4
+flash-attn @ https://github.com/Dao-AILab/flash-attention/releases/download/v2.7.3/flash_attn-2.7.3+cu12torch2.5cxx11abiFALSE-cp310-cp310-linux_x86_64.whl
 flatbuffers==25.9.23
 fonttools==4.60.1
 fqdn==1.5.1
