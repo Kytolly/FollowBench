@@ -9,8 +9,18 @@ from ..utils.video_kit import (
     validate_video_properties
 )
 from ..configs import CONFIG
-REQUIRED_META_KEYS = set(['team_name', 'model_name', 'modal', 'mode', 'contact'])
-ALLOWED_EXTENSIONS = ['.mp4', '.avi', '.mov', '.flv', '.mkv']
+REQUIRED_META_KEYS = set([
+    'team_name', 
+    'model_name', 
+    # 'modal', 
+    # 'mode', 
+    'contact'
+])
+ALLOWED_EXTENSIONS = [
+    '.mp4', 
+    '.avi', 
+    '.mov',
+]
 TOTAL_CASES_NUM = CONFIG['submission']['total_cases_num']
 STANDARD_RESOLUTION = (CONFIG['rules']['resolution_height'], CONFIG['rules']['resolution_width'])
 STANDARD_CLIP_LEN = CONFIG['rules']['clip_len']

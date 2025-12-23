@@ -16,7 +16,6 @@ from ..utils.video_kit import load_video_to_device
 class BenchmarkDataset(Dataset):
     def __init__(self, opt: Options):
         self.opt = opt
-        self.caption = {}
         self.annotation = {}
         self.transform = transforms.Compose([
             transforms.Resize((opt.height, opt.width)),
@@ -53,35 +52,14 @@ class BenchmarkDataset(Dataset):
         
     def _load_metadata(self):
         '''根据 phase 加载对应的 json 文件'''
-        if self.opt.phase == 'train':
-            # caption.json 位于 assets/train/caption.json
-            json_path = self.opt.caption if self.opt.caption else os.path.join(self.data_root, 'caption.json')
-            try:
-                with open(json_path, 'r', encoding='utf-8') as f:
-                    self.caption = json.load(f)
-            except FileNotFoundError:
-                raise RuntimeError(f"Caption file not found at {json_path}")
-        else:
-            # annotation.json 位于 assets/test/annotation.json
-            json_path = self.opt.annotation if self.opt.annotation else os.path.join(self.data_root, 'annotation.json')
-            try:
-                with open(json_path, 'r', encoding='utf-8') as f:
-                    self.annotation = json.load(f)
-            except FileNotFoundError:
-                raise RuntimeError(f"Annotation file not found at {json_path}")
-    
-    def _get_prompt(self, id):
-        data: dict = self.caption[id] if self.opt.phase == 'train' else self.annotation[id]
-        prompts_dict = data['prompts']
-        if self.opt.modal in prompts_dict:
-            pos_p = prompts_dict[self.opt.modal]
-        else:
-            # Fallback: 如果指定的 modal key 不存在，取第一个可用的 prompt
-            logging.warning(f"Modal '{self.opt.modal}' not found in prompts for {id}.")
-            pos_p = list(prompts_dict.values())[0] if prompts_dict else ""
-
-        neg_p = data.get('negative_prompt', "")      
-        return pos_p, neg_p
+        # annotation.json 位于 assets/train|test/annotation.json
+        json_path = os.path.join(self.data_root, f'annotation.json')
+        try:
+            with open(json_path, 'r', encoding='utf-8') as f:
+                self.annotation = json.load(f)
+        except FileNotFoundError:
+            raise RuntimeError(f"Annotation file not found at {json_path}")
+            
     
     def _load_image(self, rel_path):
         """读取图片 -> [C, H, W]"""
@@ -112,13 +90,10 @@ class BenchmarkDataset(Dataset):
         ego_video = self._load_video(data['the first view'])
         exo_video = self._load_video(data['the third view']) # GT
         ref_img = self._load_image(data['reference'])
-        pos_p, neg_p = self._get_prompt(vid_id)
         
         return {
             'video_id': vid_id,
             'ego_video': ego_video,
             'exo_video': exo_video, # GT
             'ref_image': ref_img,
-            'pos_prompt': pos_p,
-            'neg_prompt': neg_p
         }

@@ -6,14 +6,14 @@ test:
   rules:
     clip_len: 300
     fps: 60
-    resolution_height: 240
-    resolution_width: 426
+    resolution_height: 704
+    resolution_width: 1280
   submission:
     submission_path: "cache/gen/submission.json"
     source_path: "assets/test/"
     total_cases_num: 120
-    resolution_height: 240
-    resolution_width: 426
+    resolution_height: 704
+    resolution_width: 1280
     clip_fps: 60
     clip_len: 300
 prod:
@@ -45,7 +45,7 @@ dev:
     resolution_height: 240
     resolution_width: 426
   submission:
-    submission_path: "cache/gen/submission.json"
+    submission_path: "templates/submission_example.json"
     source_path: "assets/test"
     total_cases_num: 120
     resolution_height: 240

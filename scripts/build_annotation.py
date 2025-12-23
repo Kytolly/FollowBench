@@ -6,14 +6,14 @@ from pathlib import Path
 # ================= 配置区域 =================
 # 数据集根目录 (请根据实际情况修改，这里指向 assets/Test)
 # 注意：生成的 json 中路径将是相对于此目录的相对路径 (e.g., "test-case-000/ego.mp4")
-ASSETS_ROOT = r"D:\Desktop\xqy\NUS311\FYP\project\Ego2ExowithMotion\assets\Test"
+ASSETS_ROOT = r"assets/train"
 
 # 输出文件路径
-OUTPUT_FILE = r"D:\Desktop\xqy\NUS311\FYP\project\Ego2ExowithMotion\configs\annotation.json"
+OUTPUT_FILE = r"templates/annotation_example.json"
 
 # 默认 Prompt 模板 (因为脚本无法自动理解视频内容，这里使用占位符，您后续可以手动或用其他脚本填充)
-DEFAULT_PROMPT = "[EGO2EXO] [REF] a person [EGO] doing something [TARGET-VIEW] Third-person medium shot, environment"
-NEGATIVE_PROMPT = "shaking, blurry, distorted, low quality, pixelated, artifacts, text, watermark, signature"
+# DEFAULT_PROMPT = "[EGO2EXO] [REF] a person [EGO] doing something [TARGET-VIEW] Third-person medium shot, environment"
+# NEGATIVE_PROMPT = "shaking, blurry, distorted, low quality, pixelated, artifacts, text, watermark, signature"
 
 # ===========================================
 
@@ -51,20 +51,20 @@ def build_annotation():
 
         # 3. 构造 Prompt 字典 (对齐 caption.json 格式)
         # 如果您有 csv 或其他元数据文件包含真实 prompt，可以在这里读取并替换 DEFAULT_PROMPT
-        prompts = {
-            "t2v_generic": DEFAULT_PROMPT,
-            "i2v_generic": DEFAULT_PROMPT,
-            "vace_instruct": DEFAULT_PROMPT,
-            "ours_lora": DEFAULT_PROMPT
-        }
+        # prompts = {
+        #     "t2v_generic": DEFAULT_PROMPT,
+        #     "i2v_generic": DEFAULT_PROMPT,
+        #     "vace_instruct": DEFAULT_PROMPT,
+        #     "ours_lora": DEFAULT_PROMPT
+        # }
 
         # 4. 组装 Entry
         annotation_data[case_id] = {
             "the first view": ego_path,
             "the third view": exo_path,
             "reference": ref_path,
-            "prompts": prompts,
-            "negative_prompt": NEGATIVE_PROMPT
+            # "prompts": prompts,
+            # "negative_prompt": NEGATIVE_PROMPT
         }
 
     # 确保输出目录存在

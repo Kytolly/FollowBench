@@ -4,17 +4,17 @@ from pathlib import Path
 
 # ================= 配置区域 =================
 # 您的真实数据根目录
-ASSETS_ROOT = r"D:\Desktop\xqy\NUS311\FYP\project\Ego2ExowithMotion\assets\Test"
+ASSETS_ROOT = r"assets/test"
 
 # 输出文件路径 (根据您之前的上下文，放在 cache/gen 下)
-OUTPUT_FILE = r"D:\Desktop\xqy\NUS311\FYP\project\Ego2ExowithMotion\cache\gen\submission.json"
+OUTPUT_FILE = r"templates/submission_example.json"
 
 # 元数据配置
 META_INFO = {
     "team_name": "MyTeam",
     "model_name": "EgoGen-V1",
-    "modal": "vace_instruct",
-    "mode": "easy",
+    # "modal": "vace_instruct",
+    # "mode": "easy",
     "contact": "email@example.com"
 }
 # ===========================================
@@ -48,7 +48,7 @@ def build_submission():
             # 按照要求的结构填入
             results[case_id] = {
                 "generated video": f"{case_id}/exo.mp4",
-                "prompt": "[EGO2EXO] [REF] a woman [EGO] walking [TARGET-VIEW] Third-person medium shot, urban road"
+                # "prompt": "[EGO2EXO] [REF] a woman [EGO] walking [TARGET-VIEW] Third-person medium shot, urban road"
             }
             
     except Exception as e:

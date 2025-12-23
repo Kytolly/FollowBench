@@ -42,7 +42,7 @@ class Bench():
         # caption_path = kwargs.get('caption_path', self.assets_root / 'train/annotation.json')
         opt = Options(
             assets=str(self.assets_root),
-            annotation=str(anno_path),
+            # annotation=str(anno_path),
             phase='test', # 强制为 test 模式
             modal=meta.get('modal', 'vace_instruct'),
             mode=meta.get('mode', 'easy'),
@@ -55,7 +55,7 @@ class Bench():
         
         # 初始化 DataLoader
         # 这将自动加载 GT 和 Ego 视频，无需手动传路径
-        logging.info(f"Initializing DataLoader with annotation: {opt.annotation}")
+        # logging.info(f"Initializing DataLoader with annotation: {opt.annotation}")
         try:
             loader_wrapper = BenchmarkDataLoader(opt)
             dataloader = loader_wrapper.dataloader
