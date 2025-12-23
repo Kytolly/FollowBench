@@ -8,12 +8,25 @@ from .metric import BackgroundSemanticConsistency
 from ..utils.pretrain import get_detection_results, load_clip, load_faster_rcnn
 
 class BackgroundSemanticConsistencyEvaluator(DimensionEvaluator):
+    """Evaluator for Background Semantic Consistency (BSC).
+
+    Uses CLIP to compare frame backgrounds to a reference image; person regions
+    are masked out using a detector to focus on background semantics.
+    """
+
     def prepare(self):
+        """Load CLIP and detector models and call base prepare."""
         self.clip, self.proc = load_clip(self.device)
         self.det = load_faster_rcnn(self.device)
         super().prepare()
 
     def compute(self, **kwargs):
+        """Compute background semantic consistency for a generated video.
+
+        Expected kwargs: 'tensor_gen', 'pillow_ref', 'video_id', 'global_cache'
+        Returns the mean CLIP similarity between masked-frame backgrounds and
+        the reference image embedding.
+        """
         # parse kwargs
         video_gen = kwargs.get('tensor_gen')
         pillow_ref: Image = kwargs.get('pillow_ref')
@@ -40,6 +53,7 @@ class BackgroundSemanticConsistencyEvaluator(DimensionEvaluator):
         )
 
     def clear(self):
+        """Release model references and call base clear."""
         del self.clip
         del self.proc
         del self.det

@@ -5,10 +5,22 @@ from .metric import ViewpointValidity
 from . import DimensionEvaluator
 
 class ViewpointValidityEvaluator(DimensionEvaluator):
+    """Evaluator for viewpoint validity measuring how often a person is detected."""
+
     def prepare(self):
+        """Load the detector and call base prepare."""
         self.model = load_faster_rcnn(self.device)
         super().prepare()
+
     def compute(self, **kwargs):
+        """Compute viewpoint validity over sampled frames.
+
+        Expected kwargs: 'tensor_gen', 'video_id', 'global_cache'. The evaluator
+        samples frames (every 5th frame) to speed up detection and then computes
+        the fraction of frames with person detections via `ViewpointValidity`.
+
+        Returns a float in [0.0, 1.0].
+        """
         # parse kwargs
         video_gen = kwargs.get('tensor_gen')
         video_id = kwargs.get('video_id')

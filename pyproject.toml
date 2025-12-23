@@ -23,3 +23,17 @@ include-package-data = true
 where = ["."]
 include = ["ego2exo_bench*", "configs"]
 
+[tool.flake8]
+max-line-length = 100
+# Enable checking of type annotations via flake8-annotations plugin
+extend-select = ["ANN"]
+# Common ignores for stylistic preferences (E203 conflicts with black, W503 line break)
+extend-ignore = ["E203", "W503"]
+exclude = [".git", "__pycache__", "build", "dist", ".venv", "venv", ".eggs"]
+# Relax some checks in tests and docs
+per-file-ignores = [
+  "tests/*: D101,D102,D103,ANN",
+  "docs/*: D100,D101",
+]
+
+

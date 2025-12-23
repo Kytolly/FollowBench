@@ -6,11 +6,19 @@ from .metric import TrajectoryAlignment
 from ..utils.pretrain import get_detection_results, load_faster_rcnn
 
 class TrajectoryAlignmentEvaluator(DimensionEvaluator):
+    """Evaluator for trajectory alignment between generated and GT videos."""
+
     def prepare(self):
+        """Load detector and call base prepare."""
         self.det = load_faster_rcnn(self.device)
         super().prepare()
 
     def compute(self, **kwargs):
+        """Compute Trajectory Alignment using detection/keypoint results.
+
+        Expected kwargs: 'tensor_gen', 'tensor_gt', 'video_id', 'global_cache'.
+        Returns the mean normalized trajectory alignment error (float).
+        """
         video_gen = kwargs.get('tensor_gen')
         video_gt = kwargs.get('tensor_gt')
         video_id = kwargs.get('video_id')
