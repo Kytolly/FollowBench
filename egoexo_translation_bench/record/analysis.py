@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import json
 import os
-
+from typing import Any
 class Analyzer:
     def __init__(self, report_paths):
         """
