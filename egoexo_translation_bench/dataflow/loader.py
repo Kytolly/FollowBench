@@ -10,6 +10,17 @@ from .set import BenchmarkDataset
 from .option import Options
 
 class BenchmarkDataLoader:
+    """Wrapper for BenchmarkDataset providing PyTorch DataLoader functionality.
+    
+    This class wraps the BenchmarkDataset in a PyTorch DataLoader with
+    configurable batch size, shuffling, and multi-processing support.
+    
+    Attributes:
+        opt: Runtime configuration options
+        dataset: The underlying BenchmarkDataset instance
+        dataloader: PyTorch DataLoader instance
+    """
+    
     def __init__(self, opt: Options) -> None:
         """Initialize the data loader wrapper.
 
@@ -26,12 +37,27 @@ class BenchmarkDataLoader:
         )
 
     def load_data(self) -> "BenchmarkDataLoader":
-        """Return self for API compatibility with other frameworks."""
+        """Return self for API compatibility with other frameworks.
+        
+        Returns:
+            Self instance for method chaining
+        """
         return self
 
     def __len__(self) -> int:
+        """Return the number of samples in the dataset.
+        
+        Returns:
+            Number of samples in the underlying dataset
+        """
         return len(self.dataset)
 
     def __iter__(self) -> Iterator[Dict[str, Any]]:
+        """Iterate over the data loader yielding batches.
+        
+        Yields:
+            Dictionary containing batch data with keys like 'ego_video', 
+            'exo_video', 'video_id', etc.
+        """
         for i, data in enumerate(self.dataloader):
             yield data

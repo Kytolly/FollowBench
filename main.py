@@ -1,10 +1,23 @@
+"""Main entry point for the EgoExo Translation Benchmark.
+
+This module provides the command-line interface entry point for the benchmark system.
+"""
+
 import sys
 import os
+from pathlib import Path
 
-current_dir = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(current_dir)
+# Add current directory to Python path for module imports
+current_dir: Path = Path(__file__).parent.absolute()
+sys.path.append(str(current_dir))
 
 from egoexo_translation_bench.cli.core import cli
 
-if __name__ == '__main__':
+
+def main() -> None:
+    """Main entry point for the CLI application."""
     cli()
+
+
+if __name__ == '__main__':
+    main()

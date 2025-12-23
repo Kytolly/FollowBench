@@ -159,7 +159,22 @@ class Submission:
             return None
 
     def __getitem__(self: "Submission", item: str) -> Optional[Any]:
+        """Get generated video tensor by video ID.
+        
+        Convenience method that delegates to get_generated_video().
+        
+        Args:
+            item: Video ID string
+            
+        Returns:
+            Video tensor or None if not found or failed to load
+        """
         return self.get_generated_video(item)
 
     def __len__(self: "Submission") -> int:
+        """Return the number of video cases in the submission.
+        
+        Returns:
+            Number of video cases in the mapping
+        """
         return len(self.mapping)

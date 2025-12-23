@@ -1,13 +1,29 @@
+"""Utilities for image processing and feature extraction.
+
+This module provides functions for loading images, extracting embeddings using pre-trained models,
+and processing pose information.
+"""
 import torch
 import torch.nn.functional as F
 from torchvision import transforms
 from PIL import Image
+from typing import Optional, Tuple, Any
 
 import logging
 logger = logging.getLogger(__name__)
 
-def load_image_to_gpu(image_path, device='cuda', target_size=None):
-    """读取图片并直接转换为 Tensor [C, H, W]"""
+def load_image_to_gpu(image_path: str, device: str = 'cuda', target_size: Optional[Tuple[int, int]] = None) -> Optional[torch.Tensor]:
+    """Loads an image from a given path, converts it to a tensor, and moves it to the specified device.
+
+    Args:
+        image_path: The absolute path to the image file.
+        device: The device to load the image tensor onto (e.g., 'cuda' or 'cpu'). Defaults to 'cuda'.
+        target_size: Optional. A tuple (width, height) to resize the image to. Defaults to None.
+
+    Returns:
+        An optional torch.Tensor of shape [C, H, W] on the specified device if successful,
+        otherwise None if an error occurs during loading or processing.
+    """
     try:
         img = Image.open(image_path).convert('RGB')
         if target_size is not None:
@@ -18,9 +34,18 @@ def load_image_to_gpu(image_path, device='cuda', target_size=None):
         logger.info(f"Error loading image {image_path}: {e}")
         return None
 
-def prepare_ref_embedding(dinov2_model, dino_transform, ref_img: Image, device='cpu'):
-    """
-    预计算参考图的 Embedding
+def prepare_ref_embedding(dinov2_model: Any, dino_transform: Any, ref_img: Image.Image, device: str = 'cpu') -> Optional[torch.Tensor]:
+    """Pre-computes the embedding of a reference image using a DINOv2 model.
+
+    Args:
+        dinov2_model: The pre-trained DINOv2 model.
+        dino_transform: The transformation pipeline for the DINOv2 model input.
+        ref_img: The reference image as a PIL Image object.
+        device: The device to perform the computation on (e.g., 'cuda' or 'cpu'). Defaults to 'cpu'.
+
+    Returns:
+        An optional torch.Tensor representing the embedding of the reference image if successful,
+        otherwise None if an error occurs during processing.
     """
     try:
         ref_input = dino_transform(ref_img).unsqueeze(0).to(device)
