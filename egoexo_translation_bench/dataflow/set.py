@@ -1,9 +1,16 @@
+"""Dataset and utilities for loading benchmark data.
+
+Provides :class:`BenchmarkDataset` used by the data loader to load images and videos,
+and to prepare samples for model input.
+"""
+
 import os
 import json
 import torch
 import cv2
 import numpy as np
 import logging
+from typing import Dict, Any
 
 from torch.utils.data import Dataset
 from torchvision import transforms
@@ -14,9 +21,14 @@ from .option import Options
 from ..utils.video_kit import load_video_to_device
 
 class BenchmarkDataset(Dataset):
-    def __init__(self, opt: Options):
+    def __init__(self, opt: Options) -> None:
+        """Initialize dataset.
+
+        Args:
+            opt: Options object with runtime configuration.
+        """
         self.opt = opt
-        self.annotation = {}
+        self.annotation: Dict[str, Any] = {}
         self.transform = transforms.Compose([
             transforms.Resize((opt.height, opt.width)),
             transforms.ToTensor(),
@@ -32,8 +44,12 @@ class BenchmarkDataset(Dataset):
         self.dataset = self.caption if self.opt.phase == 'train' else self.annotation
         self.ids = list(self.dataset.keys())
 
-    def _ensure_dataset_exists(self):
-        """如果本地目录不存在或为空，尝试从 HF 下载"""
+    def _ensure_dataset_exists(self) -> None:
+        """Ensure the dataset exists locally, downloading from HuggingFace if needed.
+
+        Raises:
+            RuntimeError: If downloading fails.
+        """
         if os.path.exists(self.opt.assets) and os.listdir(self.opt.assets):
             return
         hf_repo_id = getattr(self.opt, 'hf_repo_id', None)
@@ -50,8 +66,12 @@ class BenchmarkDataset(Dataset):
         except Exception as e:
             raise RuntimeError(f"Failed to download dataset: {e}")
         
-    def _load_metadata(self):
-        '''根据 phase 加载对应的 json 文件'''
+    def _load_metadata(self) -> None:
+        """Load annotation metadata for the selected phase.
+
+        Raises:
+            RuntimeError: If annotation file is not found.
+        """
         # annotation.json 位于 assets/train|test/annotation.json
         json_path = os.path.join(self.data_root, f'annotation.json')
         try:
@@ -61,8 +81,15 @@ class BenchmarkDataset(Dataset):
             raise RuntimeError(f"Annotation file not found at {json_path}")
             
     
-    def _load_image(self, rel_path):
-        """读取图片 -> [C, H, W]"""
+    def _load_image(self, rel_path: str) -> "torch.Tensor":
+        """Load an image and apply transforms.
+
+        Args:
+            rel_path: Relative path to the image inside data root.
+
+        Returns:
+            Transformed image tensor of shape [C, H, W].
+        """
         path = os.path.join(self.data_root, rel_path)
         try:
             img = Image.open(path).convert('RGB')
@@ -71,8 +98,15 @@ class BenchmarkDataset(Dataset):
             logging.error(f"Failed to load image {path}: {e}")
             return torch.zeros(3, self.opt.height, self.opt.width)
     
-    def _load_video(self, rel_path):
-        """读取视频 -> [T, C, H, W]"""
+    def _load_video(self, rel_path: str) -> "torch.Tensor":
+        """Load a video and return a tensor.
+
+        Args:
+            rel_path: Relative path to the video inside data root.
+
+        Returns:
+            Video tensor of shape [T, C, H, W].
+        """
         path = os.path.join(self.data_root, rel_path)
         try:
             return load_video_to_device(path, device='cpu') 
@@ -80,10 +114,18 @@ class BenchmarkDataset(Dataset):
             logging.error(f"Failed to load video {path}: {e}")
             return torch.zeros(self.opt.clip_len, 3, self.opt.height, self.opt.width)
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.ids)
 
-    def __getitem__(self, index):
+    def __getitem__(self, index: int) -> Dict[str, Any]:
+        """Return a single sample by index.
+
+        Args:
+            index: Index of the sample.
+
+        Returns:
+            A dict containing 'video_id', 'ego_video', 'exo_video', and 'ref_image'.
+        """
         vid_id = self.ids[index]
         data = self.dataset[vid_id]
         

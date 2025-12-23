@@ -1,3 +1,5 @@
+"""Dynamic-degree evaluator utilities (DD)."""
+
 from typing import Any, Set
 
 
@@ -15,7 +17,7 @@ class DynamicDegreeEvaluator(DimensionEvaluator):
     result dict.
     """
 
-    def prepare(self):  # noqa: ANN201, ANN101
+    def prepare(self) -> None:  # noqa: ANN201, ANN101
         """Load RAFT model onto the configured device and call superclass prepare.
 
         Notes:
@@ -26,7 +28,7 @@ class DynamicDegreeEvaluator(DimensionEvaluator):
         self.model = load_raft(self.device)
         super().prepare()
 
-    def compute(self, **kwargs: Any):  # noqa: ANN201, ANN101
+    def compute(self, **kwargs: Any) -> float:  # noqa: ANN201, ANN101
         """Compute DD for a single video.
 
         Args:
@@ -55,4 +57,4 @@ class DynamicDegreeEvaluator(DimensionEvaluator):
             video_id=video_id,
             global_cache=global_cache,
         )
-        return results['dd']
+        return float(results['dd'])

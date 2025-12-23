@@ -1,5 +1,6 @@
 from torch import Tensor
 from torchvision.models.detection import fasterrcnn_resnet50_fpn, FasterRCNN_ResNet50_FPN_Weights
+from typing import Any
 
 from . import DimensionEvaluator
 from .metric import TrajectoryAlignment
@@ -8,12 +9,12 @@ from ..utils.pretrain import get_detection_results, load_faster_rcnn
 class TrajectoryAlignmentEvaluator(DimensionEvaluator):
     """Evaluator for trajectory alignment between generated and GT videos."""
 
-    def prepare(self):
+    def prepare(self) -> None:
         """Load detector and call base prepare."""
         self.det = load_faster_rcnn(self.device)
         super().prepare()
 
-    def compute(self, **kwargs):
+    def compute(self, **kwargs: Any) -> float:
         """Compute Trajectory Alignment using detection/keypoint results.
 
         Expected kwargs: 'tensor_gen', 'tensor_gt', 'video_id', 'global_cache'.
@@ -41,4 +42,4 @@ class TrajectoryAlignmentEvaluator(DimensionEvaluator):
             if global_cache is not None: global_cache[gt_key] = det_gt
 
         H, W = video_gen.shape[2], video_gen.shape[3]
-        return TrajectoryAlignment(det_gen, det_gt, H, W)
+        return float(TrajectoryAlignment(det_gen, det_gt, H, W))

@@ -1,5 +1,8 @@
+"""Utilities to produce ranked leaderboards from evaluation reports."""
+
 import pandas as pd
 from .analysis import Analyzer
+from typing import List
 
 # 定义指标方向 (True: Higher is Better, False: Lower is Better)
 METRIC_DIRECTION = {
@@ -19,10 +22,20 @@ METRIC_DIRECTION = {
 }
 
 class RankBoard:
-    def __init__(self, report_paths):
+    """Compute leaderboard ranking from multiple reports.
+
+    Args:
+        report_paths: List of report JSON paths to aggregate.
+    """
+    def __init__(self, report_paths: List[str]) -> None:
         self.analyzer = Analyzer(report_paths)
         
-    def generate_rank(self, output_csv="leaderboard.csv"):
+    def generate_rank(self, output_csv: str = "leaderboard.csv") -> 'pd.DataFrame':
+        """Generate a ranked leaderboard and save it as CSV.
+
+        Normalizes each metric using min-max, adjusts for directionality and
+        computes an (unweighted) average as the total score.
+        """
         df_stats = self.analyzer.get_metric_stats()
         
         # 只取 Mean 列
@@ -41,16 +54,17 @@ class RankBoard:
             min_v, max_v = vals.min(), vals.max()
             
             if max_v == min_v:
-                norm_v = 1.0 # 无法区分
+                norm_v = pd.Series([1.0] * len(vals), index=vals.index) # 无法区分
             else:
                 norm_v = (vals - min_v) / (max_v - min_v)
                 
             if not higher_is_better:
                 norm_v = 1.0 - norm_v
                 
-            normalized_scores[raw_metric_name] = norm_v
+            normalized_scores_dict[raw_metric_name] = norm_v
             
         # 2. 计算加权总分 (简单平均)
+        normalized_scores = pd.DataFrame(normalized_scores_dict)
         rank_df['Total_Score'] = normalized_scores.mean(axis=1) * 100
         
         # 3. 合并原始分数用于展示

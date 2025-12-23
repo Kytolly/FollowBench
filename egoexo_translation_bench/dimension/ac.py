@@ -1,3 +1,5 @@
+"""Appearance- and detection-based evaluators (AC/BSC etc.)."""
+
 from typing import Any
 from PIL import Image
 
@@ -17,13 +19,13 @@ class AppearanceConsistencyEvaluator(DimensionEvaluator):
     delegates the final scoring to `AppearanceConsistency`.
     """
 
-    def prepare(self):  # noqa: ANN201, ANN101
+    def prepare(self) -> None:  # noqa: ANN201, ANN101
         """Load required models: DINOv2 and Faster R-CNN, then call base prepare."""
         self.dinov2, self.dino_transform = load_dinov2(self.device)
         self.det = load_faster_rcnn(self.device)
         super().prepare()
 
-    def compute(self, **kwargs: Any):  # noqa: ANN201, ANN101
+    def compute(self, **kwargs: Any) -> float:  # noqa: ANN201, ANN101
         """Compute AC for a generated video.
 
         Expected kwargs:
@@ -61,16 +63,16 @@ class AppearanceConsistencyEvaluator(DimensionEvaluator):
             if global_cache is not None:
                 global_cache[cache_key] = detections
 
-        return AppearanceConsistency(
+        return float(AppearanceConsistency(
             ref_emb=ref_emb,
             video_gen=video_gen,
             dinov2=self.dinov2,
             dino_transform=self.dino_transform,
             detection_results=detections,
             device=self.device
-        )
+        ))
 
-    def clear(self):  # noqa: ANN201, ANN101
+    def clear(self) -> None:  # noqa: ANN201, ANN101
         """Release large model references and call base clear."""
         del self.dinov2
         del self.det

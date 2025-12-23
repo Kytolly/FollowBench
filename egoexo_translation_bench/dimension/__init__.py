@@ -1,3 +1,11 @@
+"""Dimension evaluators and routing utilities.
+
+This module exposes the :class:`BenchRouter` which orchestrates per-metric
+computations by dynamically loading metric-specific evaluators. It also
+contains the base :class:`DimensionEvaluator` class used by concrete
+implementations in the `dimension` package.
+"""
+
 import importlib
 import numpy as np
 import gc
@@ -8,6 +16,7 @@ logger = logging.getLogger(__name__)
 
 import torch
 from torchvision.transforms.functional import to_pil_image
+from typing import Any, Dict, Optional, Union, Iterator
 
 from ..utils import gpu
 from ..utils.video_kit import extract_i3d_features
@@ -27,17 +36,28 @@ DIMENSION_MODULE_MAP = dict(zip(DIMENSION_NAMES, DIMENSION_NAMES_IN_SHORT))
 SHORT_TO_FULL_MAP = {v: k for k, v in DIMENSION_MODULE_MAP.items()}
 
 class DimensionEvaluator():
-    def __init__(self, device):
-        self.device = device
-        self.model = None
+    """Base class for all metric evaluators.
+
+    Subclasses should implement :meth:`compute` and may override :meth:`prepare`.
+    """
+    def __init__(self, device: str) -> None:
+        self.device: str = device
+        self.model: Optional[Any] = None
         
-    def prepare(self):
+    def prepare(self) -> None:
+        """Prepare internal models or state for evaluation."""
         logger.info(f"{self.__class__.__name__} prepared!")
     
-    def compute(self, **kwargs):
+    def compute(self, **kwargs) -> float:
+        """Compute the metric for a single case.
+
+        Returns:
+            A numeric score for the provided inputs.
+        """
         raise NotImplementedError
     
-    def clear(self):
+    def clear(self) -> None:
+        """Release any heavy resources (models, GPU memory)."""
         if self.model is not None:
             del self.model
             self.model = None
@@ -200,8 +220,12 @@ class BenchRouter():
         finally:
             if 'evaluator' in locals(): evaluator.clear()
 
-    def _clear_cache_for_metric(self, metric_name):
-        """根据指标清理缓存"""
+    def _clear_cache_for_metric(self, metric_name: str) -> None:
+        """Clear metric-specific keys from the global cache.
+
+        Args:
+            metric_name: Full name of the metric just computed.
+        """
         if metric_name in ['TemporalFlickering', 'MotionSmoothness', 'OpticalFlowCorrelation']:
             self.global_cache = {k:v for k,v in self.global_cache.items() if 'flow_' not in k}
         elif metric_name in ['CameraCenteringError', 'ViewpointValidity', 'AppearanceConsistency', 'BackgroundSemanticConsistency', 'TrajectoryAlignment']:

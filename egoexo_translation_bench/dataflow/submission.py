@@ -1,3 +1,9 @@
+"""Data structures and IO utilities for handling submission files.
+
+This module provides the :class:`Submission` class which loads a submission JSON
+and offers helpers for validation and loading generated videos into memory.
+"""
+
 import json
 from pathlib import Path
 from typing import Union, Optional, Dict, Any
@@ -27,22 +33,29 @@ STANDARD_CLIP_LEN = CONFIG['rules']['clip_len']
 STANDARD_CLIP_FPS = CONFIG['rules']['fps']
 
 class Submission:
-    """
-    专门负责 Submission 数据的 IO 和 Tensor 转换。
-    它作为一个只读的 Data Mapping 将 Video ID 映射为显存中的 Video Tensor。
+    """Submission data IO and access helper.
+
+    The class loads a submission JSON file and maps video IDs to on-disk video paths
+    and provides convenience methods to validate the submission and to load videos
+    as tensors.
+
+    Attributes:
+        meta_info: Metadata from the submission file.
+        mapping: Mapping from video id to result entries.
     """
     meta_info: Dict[str, Any]
-    mapping: Dict[str, Any]
+    mapping: Dict[str, Dict[str, Any]]
 
     def __init__(self: "Submission",
                  submission_path: Union[str, Path],
                  source_path: Union[str, Path],
                  device: str = 'cpu') -> None:
-        """
+        """Initialize the Submission.
+
         Args:
-            submission_path: submission.json 的路径
-            source_path: 生成视频所在的根目录 (所有相对路径均基于此)
-            device: 预加载的设备
+            submission_path: Path to the submission JSON file.
+            source_path: Root directory containing generated videos (relative paths in JSON).
+            device: Device to load tensors onto (e.g., 'cpu' or 'cuda').
         """
         self.device = device
         self.source_path = Path(source_path)
@@ -52,7 +65,12 @@ class Submission:
         self._load()
     
     def _load(self: "Submission") -> None:
-        """加载 JSON 并解析 meta/results"""
+        """Load and parse the submission JSON file.
+
+        Raises:
+            FileNotFoundError: If submission file is not found.
+            ValueError: If submission JSON is invalid.
+        """
         if not self.submission_path.exists():
             raise FileNotFoundError(f"Submission file not found: {self.submission_path}")
         if not self.source_path.exists():
@@ -69,7 +87,11 @@ class Submission:
         logger.info(f"Loaded submission with {len(self.mapping)} cases.")
         
     def validate_all(self: "Submission") -> None:
-        """执行全量检查 Meta, 数量, 每个视频的物理属性"""
+        """Validate submission meta, case count, and per-video properties.
+
+        Raises:
+            ValueError: Aggregated validation errors if any check fails.
+        """
         errors: list[str] = []
 
         # A. Meta Check
@@ -118,7 +140,14 @@ class Submission:
         logger.info("✅ Submission validation passed successfully.")
         
     def get_generated_video(self: "Submission", video_id: str) -> Optional[Any]:
-        """获取视频 Tensor [T, C, H, W]"""
+        """Load and return the generated video tensor for the given ID.
+
+        Args:
+            video_id: ID of the video to load.
+
+        Returns:
+            A video tensor or None if the video is missing or failed to load.
+        """
         if video_id not in self.mapping:
             return None
         rel_path = self.mapping[video_id]["generated video"]

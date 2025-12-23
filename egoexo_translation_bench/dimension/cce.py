@@ -1,3 +1,5 @@
+"""Camera-centering evaluator utilities."""
+
 from typing import Any
 from torch import Tensor
 
@@ -13,12 +15,12 @@ class CameraCenteringErrorEvaluator(DimensionEvaluator):
     centrally the detected person is positioned in each frame.
     """
 
-    def prepare(self):  # noqa: ANN201, ANN101
+    def prepare(self) -> None:  # noqa: ANN201, ANN101
         """Load the detector and call base prepare."""
         self.model = load_faster_rcnn(self.device)
         super().prepare()
 
-    def compute(self, **kwargs: Any):  # noqa: ANN201, ANN101
+    def compute(self, **kwargs: Any) -> float:  # noqa: ANN201, ANN101
         """Compute CCE for generated video.
 
         Expected kwargs: 'tensor_gen', 'video_id', 'global_cache'. Returns a float
@@ -39,4 +41,4 @@ class CameraCenteringErrorEvaluator(DimensionEvaluator):
                 global_cache[cache_key] = detections
 
         H, W = video_gen.shape[2], video_gen.shape[3]
-        return CameraCenteringError(detections, H, W)
+        return float(CameraCenteringError(detections, H, W))

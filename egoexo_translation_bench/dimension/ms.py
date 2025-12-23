@@ -1,3 +1,5 @@
+"""Motion-smoothness related evaluator wrapping RAFT-based flows."""
+
 from typing import Any, Set
 
 from . import DimensionEvaluator
@@ -8,12 +10,12 @@ from ..utils.pretrain import load_raft
 class MotionSmoothnessEvaluator(DimensionEvaluator):
     """Evaluator for Motion Smoothness (MS) using a RAFT flow model."""
 
-    def prepare(self):  # noqa: ANN201, ANN101
+    def prepare(self) -> None:  # noqa: ANN201, ANN101
         """Load RAFT model and call base prepare."""
         self.model = load_raft(self.device)
         super().prepare()
 
-    def compute(self, **kwargs: Any):  # noqa: ANN201, ANN101
+    def compute(self, **kwargs: Any) -> float:  # noqa: ANN201, ANN101
         """Compute the MS metric for the generated video.
 
         Expected kwargs: 'tensor_gen', 'video_id', 'global_cache', optional
@@ -34,4 +36,4 @@ class MotionSmoothnessEvaluator(DimensionEvaluator):
             video_id=video_id,
             global_cache=global_cache,
         )
-        return results['ms']
+        return float(results['ms'])

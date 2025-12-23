@@ -16,11 +16,16 @@ class Analyzer:
                 model_name = rpt.get('meta', {}).get('model_name', 'Unknown')
                 self.data[model_name] = rpt
 
-    def _load_json(self, path):
+    def _load_json(self, path: str) -> Any:
         with open(path, 'r') as f: return json.load(f)
 
-    def get_metric_stats(self):
-        """计算每个模型在每个指标上的均值和方差"""
+    def get_metric_stats(self) -> 'pd.DataFrame':
+        """Compute mean and std per metric across loaded reports.
+
+        Returns:
+            DataFrame where each row corresponds to a model and columns contain
+            metric mean and std values (e.g., 'AestheticQuality_Mean').
+        """
         stats = []
         
         for model, content in self.data.items():
@@ -45,8 +50,15 @@ class Analyzer:
         
         return pd.DataFrame(stats)
 
-    def compare_models(self, baseline_name):
-        """计算其他模型相对于 Baseline 的提升/下降百分比"""
+    def compare_models(self, baseline_name: str) -> 'pd.DataFrame':
+        """Compare models relative to a baseline.
+
+        Args:
+            baseline_name: Name of the model to use as baseline.
+
+        Returns:
+            DataFrame with additional columns showing percentage gap vs baseline.
+        """
         df = self.get_metric_stats()
         if baseline_name not in df['Model'].values:
             print(f"Baseline {baseline_name} not found.")

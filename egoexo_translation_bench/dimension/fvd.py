@@ -14,7 +14,7 @@ class FrechetVideoDistanceEvaluator(DimensionEvaluator):
     `global_cache` if provided to avoid redundant computation.
     """
 
-    def prepare(self):  # noqa: ANN201, ANN101
+    def prepare(self) -> None:  # noqa: ANN201, ANN101
         """Load the I3D model onto the evaluator device and call superclass prepare.
 
         Notes:
@@ -23,7 +23,7 @@ class FrechetVideoDistanceEvaluator(DimensionEvaluator):
         self.model = load_i3d(self.device)
         super().prepare()
 
-    def compute(self, **kwargs: Any):  # noqa: ANN201, ANN101
+    def compute(self, **kwargs: Any) -> float:  # noqa: ANN201, ANN101
         """Compute FVD between generated and ground-truth videos.
 
         Args:
@@ -35,7 +35,7 @@ class FrechetVideoDistanceEvaluator(DimensionEvaluator):
                     - 'global_cache': optional dict-like cache for intermediate results.
 
         Returns:
-            A `FrechetVideoDistance` object constructed from the extracted features.
+            A scalar FVD score (float) computed from extracted features.
         """
         video_gen = kwargs.get('tensor_gen')
         video_gt = kwargs.get('tensor_gt')
@@ -60,4 +60,4 @@ class FrechetVideoDistanceEvaluator(DimensionEvaluator):
             if global_cache is not None:
                 global_cache[gt_key] = feat_gt
 
-        return FrechetVideoDistance(feat_gen, feat_gt)
+        return float(FrechetVideoDistance(feat_gen, feat_gt))

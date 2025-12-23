@@ -1,4 +1,7 @@
+"""Viewpoint- and detection-based evaluator utilities."""
+
 from torchvision.models.detection import fasterrcnn_resnet50_fpn, FasterRCNN_ResNet50_FPN_Weights
+from typing import Any
 
 from ..utils.pretrain import get_detection_results, load_faster_rcnn
 from .metric import ViewpointValidity
@@ -7,12 +10,12 @@ from . import DimensionEvaluator
 class ViewpointValidityEvaluator(DimensionEvaluator):
     """Evaluator for viewpoint validity measuring how often a person is detected."""
 
-    def prepare(self):
+    def prepare(self) -> None:
         """Load the detector and call base prepare."""
         self.model = load_faster_rcnn(self.device)
         super().prepare()
 
-    def compute(self, **kwargs):
+    def compute(self, **kwargs: Any) -> float:
         """Compute viewpoint validity over sampled frames.
 
         Expected kwargs: 'tensor_gen', 'video_id', 'global_cache'. The evaluator
@@ -36,4 +39,4 @@ class ViewpointValidityEvaluator(DimensionEvaluator):
             if global_cache is not None:
                 global_cache[cache_key] = detections
 
-        return ViewpointValidity(detections)
+        return float(ViewpointValidity(detections))

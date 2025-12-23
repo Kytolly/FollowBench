@@ -1,11 +1,28 @@
+"""Runtime options dataclass used across dataflow modules.
+
+Default values are read from the global CONFIG and provide dataset and runtime
+settings used by dataset and loader utilities.
+"""
+
 from dataclasses import dataclass
 from ..configs import CONFIG
 
 @dataclass
 class Options:
-    """
-    运行时参数配置类。
-    默认值从全局 CONFIG (OmegaConf) 中读取，支持点号访问。
+    """Runtime configuration options.
+
+    Attributes:
+        repo_id: HuggingFace repository id for the dataset.
+        assets: Local assets directory.
+        phase: One of 'train' or 'test'.
+        modal: Model/modal setting used by apps.
+        mode: Difficulty mode string.
+        clip_len: Number of frames per clip.
+        height: Frame height in pixels.
+        width: Frame width in pixels.
+        batch_size: Batch size for data loaders.
+        serial_batches: If true, disables shuffling.
+        num_workers: Number of worker processes for data loading.
     """
     # 基础信息
     repo_id:        str  = "Kytolly/examples_Ego2ExoFollowCamera" # HuggingFace 仓库 ID

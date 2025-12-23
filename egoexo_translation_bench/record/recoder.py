@@ -1,26 +1,33 @@
+"""Recording utilities for evaluation results.
+
+This module defines :class:`Recorder` which accumulates metric results and
+serializes a final report JSON file.
+"""
+
 import os
 import json
 import numpy as np
 from datetime import datetime
 import logging
+from typing import Any, Dict, Union
 logger = logging.getLogger()
 
 class Recorder:
-    def __init__(self, meta, output_dir):
-        """
-        初始化 Recorder
-        Args:
-            meta (dict): 包含 team_name, model_name等元数据
-            output_dir (str): 报告保存目录
-        """
-        self.meta = meta
-        self.record_time = datetime.now().isoformat()
+    """Collect and save evaluation results.
+
+    Args:
+        meta: Metadata dictionary (must include team_name, model_name, etc.).
+        output_dir: Directory where reports will be saved.
+    """
+    def __init__(self, meta: Dict[str, Any], output_dir: str) -> None:
+        self.meta: Dict[str, Any] = meta
+        self.record_time: str = datetime.now().isoformat()
         self.meta["timestamp"] = self.record_time
-        self.output_dir = output_dir
+        self.output_dir: str = output_dir
         os.makedirs(self.output_dir, exist_ok=True)
         
         # 存储结构: { MetricName: { CaseID: Score } } 或 { MetricName: Score }
-        self.data = {}
+        self.data: Dict[str, Union[Dict[str, float], float, Any]] = {}
 
     def update(self, metric_name, results):
         """
@@ -54,9 +61,14 @@ class Recorder:
             logger.warning(f"Unexpected result type for {metric_name}: {type(results)}")
             self.data[metric_name] = results
 
-    def save_report(self, filename:str=None):
-        """
-        将结果保存为符合 report.json 格式的文件
+    def save_report(self, filename: str | None = None) -> str:
+        """Save the aggregated results to a JSON report file.
+
+        Args:
+            filename: Optional filename. If omitted a timestamped name will be used.
+
+        Returns:
+            The full path to the saved report file.
         """
         if filename is None:
             now = datetime.now()
