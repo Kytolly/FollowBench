@@ -10,7 +10,6 @@ from torchvision.transforms.functional import to_pil_image
 from typing import Any, Optional, Set
 
 from ..utils.math import(
-    p_corr,
     axis_angle_to_matrix,
     wrap_to_pi
 )
@@ -46,60 +45,38 @@ def AestheticQuality(video_gen: Tensor, aq_model: Any, batch_size: int = 8):  # 
     return all_scores.mean().item()
 
 
-def AppearanceConsistency(
-    ref_emb: Tensor,
-    video_gen: Tensor,
-    dinov2: Any,
-    dino_transform: Any,
-    detection_results: Any,
-    device: Any,
-):  # noqa: ANN201
-    """Measure appearance consistency (AC) between generated video and a reference.
+def AverageDisplacementError(gen_results, gt_results, H, W):  # noqa: ANN201
+    """Measure alignment between generated and ground-truth trajectories.
 
-    For each frame, the function crops the detected person bounding box, extracts
-    a DINOv2 embedding for the crop, and computes cosine similarity to the
-    provided reference embedding. Small/missing detections are penalized.
+    Computes normalized per-frame distances between trajectories (center points
+    per frame) and returns the mean normalized distance.
 
     Args:
-        ref_emb: Reference embedding tensor of shape [1, D].
-        video_gen: Generated video tensor [T, 3, H, W].
-        dinov2: DINOv2 model callable that accepts preprocessed PIL input.
-        dino_transform: Transform that converts PIL image to model input tensor.
-        detection_results: List of detection results per frame or None.
-        device: Torch device to run the model on.
+        gen_results: Detection/keypoint results for generated video frames.
+        gt_results: Detection/keypoint results for ground-truth frames.
+        H: Image height.
+        W: Image width.
 
     Returns:
-        Mean cosine similarity score (float) in [-1, 1], or 0.0 if no valid detections.
+        Mean normalized trajectory alignment error in [0.0, 1.0] (1.0 worst).
     """
-    scores = []
-    T = video_gen.shape[0]
-    H, W = video_gen.shape[2], video_gen.shape[3]
-
-    for i in range(T):
-        res = detection_results[i]
-        if res is None:
-            scores.append(0.0)  # 惩罚没有检测到人的结果
-            continue
-        
-        box, _ = res
-        x1, y1, x2, y2 = map(int, box.tolist())
-        x1, y1 = max(0, x1), max(0, y1)
-        x2, y2 = min(W, x2), min(H, y2)  # 边界保护
-        if x2 - x1 < 10 or y2 - y1 < 10:
-            scores.append(0.0)  # 框太小则忽略
-            continue
-
-        # Crop 人物区域提取特征
-        person_crop = video_gen[i, :, y1:y2, x1:x2]  # [3, h, w]
-        img_pil = to_pil_image(person_crop.cpu())  # 转 PIL -> Transform -> Tensor -> GPU
-        input_tensor = dino_transform(img_pil).unsqueeze(0).to(device)
-        with torch.no_grad():
-            curr_emb = dinov2(input_tensor)  # [1, D]
-
-        sim = F.cosine_similarity(curr_emb, ref_emb)  # 计算余弦相似度
-        scores.append(sim.item())
-
-    return sum(scores) / len(scores) if scores else 0.0
+    traj_gen = get_traj(gen_results)
+    traj_gt = get_traj(gt_results)
+    
+    min_len = min(len(traj_gen), len(traj_gt))
+    if min_len < 2:
+        return 1.0  # 无法计算
+    
+    dists = []
+    diag = np.sqrt(H**2 + W**2)
+    for i in range(min_len):
+        p_gen = traj_gen[i]
+        p_gt = traj_gt[i]
+        if p_gen is not None and p_gt is not None:
+            d = np.linalg.norm(p_gen - p_gt) / diag
+            dists.append(d)
+            
+    return np.mean(dists) if dists else 1.0
 
 
 def BackgroundSemanticConsistency(
@@ -612,7 +589,63 @@ def SubjectCameraDistanceError(
     
     return scde.item()
     
-    
+
+def SubjectDetectionRate(detection_results: Any):  # noqa: ANN201
+    """Compute viewpoint validity as the fraction of frames with human detections.
+
+    Args:
+        detection_results: List of detection results per frame.
+
+    Returns:
+        Fraction in [0.0, 1.0] of frames where a person was detected.
+    """
+    if not detection_results:
+        return 0.0
+    detected = sum(1 for res in detection_results if res is not None)
+    return detected / len(detection_results)
+
+
+def StructuralFidelity(
+    ref_emb: Tensor,
+    video_gen: Tensor,
+    dinov2: Any,
+    dino_transform: Any,
+    detection_results: Any,
+    device: Any,
+):  # noqa: ANN201
+    """
+    """
+    scores = []
+    T = video_gen.shape[0]
+    H, W = video_gen.shape[2], video_gen.shape[3]
+
+    for i in range(T):
+        res = detection_results[i]
+        if res is None:
+            scores.append(0.0)  # 惩罚没有检测到人的结果
+            continue
+        
+        box, _ = res
+        x1, y1, x2, y2 = map(int, box.tolist())
+        x1, y1 = max(0, x1), max(0, y1)
+        x2, y2 = min(W, x2), min(H, y2)  # 边界保护
+        if x2 - x1 < 10 or y2 - y1 < 10:
+            scores.append(0.0)  # 框太小则忽略
+            continue
+
+        # Crop 人物区域提取特征
+        person_crop = video_gen[i, :, y1:y2, x1:x2]  # [3, h, w]
+        img_pil = to_pil_image(person_crop.cpu())  # 转 PIL -> Transform -> Tensor -> GPU
+        input_tensor = dino_transform(img_pil).unsqueeze(0).to(device)
+        with torch.no_grad():
+            curr_emb = dinov2(input_tensor)  # [1, D]
+
+        sim = F.cosine_similarity(curr_emb, ref_emb)  # 计算余弦相似度
+        scores.append(sim.item())
+
+    return sum(scores) / len(scores) if scores else 0.0
+
+
 def TemporalFlickering(gen_frames: Tensor, gen_flows: Tensor, device):  # noqa: ANN201
     """Measure temporal flickering using warping consistency with optical flow.
 
@@ -680,55 +713,6 @@ def TrajectorySmoothness(global_motion: Tensor):
     # 2. 计算模长并取平均
     score = torch.mean(torch.norm(acc, p=2, dim=1))
     return score.item()
-
-
-def AverageDisplacementError(gen_results, gt_results, H, W):  # noqa: ANN201
-    """Measure alignment between generated and ground-truth trajectories.
-
-    Computes normalized per-frame distances between trajectories (center points
-    per frame) and returns the mean normalized distance.
-
-    Args:
-        gen_results: Detection/keypoint results for generated video frames.
-        gt_results: Detection/keypoint results for ground-truth frames.
-        H: Image height.
-        W: Image width.
-
-    Returns:
-        Mean normalized trajectory alignment error in [0.0, 1.0] (1.0 worst).
-    """
-    traj_gen = get_traj(gen_results)
-    traj_gt = get_traj(gt_results)
-    
-    min_len = min(len(traj_gen), len(traj_gt))
-    if min_len < 2:
-        return 1.0  # 无法计算
-    
-    dists = []
-    diag = np.sqrt(H**2 + W**2)
-    for i in range(min_len):
-        p_gen = traj_gen[i]
-        p_gt = traj_gt[i]
-        if p_gen is not None and p_gt is not None:
-            d = np.linalg.norm(p_gen - p_gt) / diag
-            dists.append(d)
-            
-    return np.mean(dists) if dists else 1.0
-
-
-def ViewpointValidity(detection_results: Any):  # noqa: ANN201
-    """Compute viewpoint validity as the fraction of frames with human detections.
-
-    Args:
-        detection_results: List of detection results per frame.
-
-    Returns:
-        Fraction in [0.0, 1.0] of frames where a person was detected.
-    """
-    if not detection_results:
-        return 0.0
-    detected = sum(1 for res in detection_results if res is not None)
-    return detected / len(detection_results)
 
 
 def calculate_metrics_based_flow_model(  # noqa: ANN201

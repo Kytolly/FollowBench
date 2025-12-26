@@ -8,17 +8,13 @@ logger = logging.getLogger(__name__)
 from torch import Tensor
 
 from ..dimension import DimensionEvaluator
-from .metric import AppearanceConsistency
+from .metric import StructuralFidelity
 from ..utils.pretrain import load_dinov2, load_faster_rcnn, get_detection_results
 from ..utils.image_kit import prepare_ref_embedding
 
 
-class AppearanceConsistencyEvaluator(DimensionEvaluator):
-    """Evaluator for Appearance Consistency (AC) across a video.
-
-    This evaluator prepares DINOv2 and a person detector, computes per-frame
-    detections (cached when possible), extracts a reference embedding and
-    delegates the final scoring to `AppearanceConsistency`.
+class StructuralFidelityEvaluator(DimensionEvaluator):
+    """
     """
 
     def prepare(self):  # noqa: ANN201, ANN101
@@ -65,7 +61,7 @@ class AppearanceConsistencyEvaluator(DimensionEvaluator):
             if global_cache is not None:
                 global_cache[cache_key] = detections
 
-        return float(AppearanceConsistency(
+        return float(StructuralFidelity(
             ref_emb=ref_emb,
             video_gen=video_gen,
             dinov2=self.dinov2,

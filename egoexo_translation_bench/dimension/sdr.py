@@ -5,10 +5,10 @@ import logging
 logger = logging.getLogger(__name__)
 
 from ..utils.pretrain import get_detection_results, load_faster_rcnn
-from .metric import ViewpointValidity
+from .metric import SubjectDetectionRate
 from ..dimension import DimensionEvaluator
 
-class ViewpointValidityEvaluator(DimensionEvaluator):
+class SubjectDetectionRateEvaluator(DimensionEvaluator):
     """Evaluator for viewpoint validity measuring how often a person is detected."""
 
     def prepare(self):
@@ -40,4 +40,4 @@ class ViewpointValidityEvaluator(DimensionEvaluator):
             if global_cache is not None:
                 global_cache[cache_key] = detections
 
-        return float(ViewpointValidity(detections))
+        return float(SubjectDetectionRate(detections))
