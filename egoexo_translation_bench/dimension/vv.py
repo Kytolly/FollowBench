@@ -1,21 +1,22 @@
 """Viewpoint- and detection-based evaluator utilities."""
 
-from torchvision.models.detection import fasterrcnn_resnet50_fpn, FasterRCNN_ResNet50_FPN_Weights
 from typing import Any
+import logging
+logger = logging.getLogger(__name__)
 
 from ..utils.pretrain import get_detection_results, load_faster_rcnn
 from .metric import ViewpointValidity
-from . import DimensionEvaluator
+from ..dimension import DimensionEvaluator
 
 class ViewpointValidityEvaluator(DimensionEvaluator):
     """Evaluator for viewpoint validity measuring how often a person is detected."""
 
-    def prepare(self) -> None:
+    def prepare(self):
         """Load the detector and call base prepare."""
         self.model = load_faster_rcnn(self.device)
         super().prepare()
 
-    def compute(self, **kwargs: Any) -> float:
+    def compute(self, **kwargs: Any):
         """Compute viewpoint validity over sampled frames.
 
         Expected kwargs: 'tensor_gen', 'video_id', 'global_cache'. The evaluator

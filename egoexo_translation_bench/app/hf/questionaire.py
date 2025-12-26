@@ -2,11 +2,11 @@ import gradio as gr
 import json
 from functools import partial
 
-from ..utils.hf import handle_next, handle_submit
-from ..questionaire.loader import DatasetLoader
-from ..questionaire.blind_study import BlindStudyEngine
-from ..questionaire.collector import FeedbackCollector
-from ..questionaire import (
+from ...utils.hf import handle_next, handle_submit
+from ...questionaire.loader import DatasetLoader
+from ...questionaire.blind_study import BlindStudyEngine
+from ...questionaire.collector import FeedbackCollector
+from ...questionaire import (
     STYLE_PATH,
     FEEDBACK_PATH,
     ASSETS_DIR,

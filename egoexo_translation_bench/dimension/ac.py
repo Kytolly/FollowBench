@@ -2,10 +2,12 @@
 
 from typing import Any
 from PIL import Image
+import logging
+logger = logging.getLogger(__name__)
 
 from torch import Tensor
 
-from . import DimensionEvaluator
+from ..dimension import DimensionEvaluator
 from .metric import AppearanceConsistency
 from ..utils.pretrain import load_dinov2, load_faster_rcnn, get_detection_results
 from ..utils.image_kit import prepare_ref_embedding
@@ -19,13 +21,13 @@ class AppearanceConsistencyEvaluator(DimensionEvaluator):
     delegates the final scoring to `AppearanceConsistency`.
     """
 
-    def prepare(self) -> None:  # noqa: ANN201, ANN101
+    def prepare(self):  # noqa: ANN201, ANN101
         """Load required models: DINOv2 and Faster R-CNN, then call base prepare."""
         self.dinov2, self.dino_transform = load_dinov2(self.device)
         self.det = load_faster_rcnn(self.device)
         super().prepare()
 
-    def compute(self, **kwargs: Any) -> float:  # noqa: ANN201, ANN101
+    def compute(self, **kwargs: Any):  # noqa: ANN201, ANN101
         """Compute AC for a generated video.
 
         Expected kwargs:
@@ -72,7 +74,7 @@ class AppearanceConsistencyEvaluator(DimensionEvaluator):
             device=self.device
         ))
 
-    def clear(self) -> None:  # noqa: ANN201, ANN101
+    def clear(self):  # noqa: ANN201, ANN101
         """Release large model references and call base clear."""
         del self.dinov2
         del self.det

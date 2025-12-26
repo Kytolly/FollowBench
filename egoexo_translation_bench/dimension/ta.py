@@ -1,20 +1,22 @@
 from torch import Tensor
 from torchvision.models.detection import fasterrcnn_resnet50_fpn, FasterRCNN_ResNet50_FPN_Weights
 from typing import Any
+import logging
+logger = logging.getLogger(__name__)
 
-from . import DimensionEvaluator
+from ..dimension import DimensionEvaluator
 from .metric import TrajectoryAlignment
 from ..utils.pretrain import get_detection_results, load_faster_rcnn
 
 class TrajectoryAlignmentEvaluator(DimensionEvaluator):
     """Evaluator for trajectory alignment between generated and GT videos."""
 
-    def prepare(self) -> None:
+    def prepare(self):
         """Load detector and call base prepare."""
         self.det = load_faster_rcnn(self.device)
         super().prepare()
 
-    def compute(self, **kwargs: Any) -> float:
+    def compute(self, **kwargs: Any):
         """Compute Trajectory Alignment using detection/keypoint results.
 
         Expected kwargs: 'tensor_gen', 'tensor_gt', 'video_id', 'global_cache'.

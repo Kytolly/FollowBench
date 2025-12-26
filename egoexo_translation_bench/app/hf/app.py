@@ -1,12 +1,12 @@
 import gradio as gr
 
-from configs import CONFIG
-from .hf.leaderboard import create_leaderboard_tab
-from .hf.gallery import create_gallery_tab
-from .hf.submission import create_submission_tab
-from .hf.questionaire import create_questionaire_tab
-from .hf.about import create_about_tab
-from .hf.citation import create_citation_tab
+from ...configs import CONFIG
+from .leaderboard import create_leaderboard_tab
+from .gallery import create_gallery_tab
+from .submission import create_submission_tab
+from .questionaire import create_questionaire_tab
+from .about import create_about_tab
+from .citation import create_citation_tab
 
 from . import (
     RESULT_DIR,

@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from configs import CONFIG, CONFIG_DIR
+from ..configs import CONFIG, CONFIG_DIR
 
 from .loader import DatasetLoader
 from .blind_study import BlindStudyEngine

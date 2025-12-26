@@ -1,7 +1,10 @@
 """Aesthetic evaluator utilities (LAION-Aesthetics)."""
 
 from typing import Any
-from . import DimensionEvaluator
+import logging
+logger = logging.getLogger(__name__)
+
+from ..dimension import DimensionEvaluator
 from ..utils.pretrain import load_laion_aes_vit
 from .metric import AestheticQuality
 
@@ -17,7 +20,7 @@ class AestheticQualityEvaluator(DimensionEvaluator):
         self.model = load_laion_aes_vit(self.device)
         super().prepare()
 
-    def compute(self, **kwargs: Any) -> float:
+    def compute(self, **kwargs: Any):
         """Compute the aesthetics score for the generated video.
 
         Args:

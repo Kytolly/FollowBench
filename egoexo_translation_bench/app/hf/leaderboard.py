@@ -3,8 +3,8 @@ import pandas as pd
 import json
 from pathlib import Path
 
-from ..record.rankboard import RankBoard
-from ..record.visualization import main_visualize
+from ...record.rankboard import RankBoard
+from ...record.visualization import main_visualize
 
 def get_leaderboard_df(result_dir, config_dir):
     """生成排行榜 DataFrame"""

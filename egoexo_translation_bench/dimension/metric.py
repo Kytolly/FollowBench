@@ -1,5 +1,7 @@
 import numpy as np
 from scipy.linalg import sqrtm
+import logging
+logger = logging.getLogger(__name__)
 
 import torch
 from torch import Tensor
@@ -95,6 +97,7 @@ def AppearanceConsistency(
 
     return sum(scores) / len(scores) if scores else 0.0
 
+
 def BackgroundSemanticConsistency(
     ref_img_pil: Any,
     video_gen: Tensor,
@@ -153,6 +156,7 @@ def BackgroundSemanticConsistency(
         scores.append(sim.item())
         
     return sum(scores) / len(scores) if scores else 0.0
+
 
 def CameraCenteringError(detection_results: Any, H: int, W: int):  # noqa: ANN201
     """Compute camera centering error measuring how close the main person is to frame center.
@@ -278,6 +282,7 @@ def HumanActionAlignment(gen_results: Any, gt_results: Any, H: int, W: int):  # 
         
     return np.mean(frame_errors) if frame_errors else 1.0
 
+
 def ImagingQuality(video_gen: Tensor, iq_model: Any, batch_size: int = 4):  # noqa: ANN201
     """
     计算图像质量 (MUSIQ)
@@ -344,6 +349,61 @@ def OpticalFlowCorrelation(gen_flows: Tensor, gt_flows: Tensor, device: Any):  #
     ofc = ((corr_x + corr_y) / 2.0).item()
     return ofc
 
+
+def SideBySideDepthConsistency(
+    depth_pred: torch.Tensor, 
+    depth_gt: torch.Tensor, 
+    eps: float = 1e-6
+):
+    """
+    Core algorithm for SSDC: Affine-Invariant Depth Error.
+    
+    Args:
+        depth_pred: Predicted depth map sequence [T, H, W] or flattened [N]
+        depth_gt: Ground truth depth map sequence [T, H, W] or flattened [N]
+        eps: Epsilon for numerical stability
+        
+    Returns:
+        RMSE score after least-squares alignment (Lower is better)
+    """
+    # 1. Flatten
+    d_pred = depth_pred.flatten().float()
+    d_gt = depth_gt.flatten().float()
+    
+    if d_pred.numel() != d_gt.numel():
+        # Handle mismatch by cropping to min length if necessary, 
+        # though usually handled in Evaluator
+        min_len = min(d_pred.numel(), d_gt.numel())
+        d_pred = d_pred[:min_len]
+        d_gt = d_gt[:min_len]
+
+    # 2. Statistics
+    mu_pred = torch.mean(d_pred)
+    mu_gt = torch.mean(d_gt)
+
+    d_pred_centered = d_pred - mu_pred
+    d_gt_centered = d_gt - mu_gt
+
+    # 3. Least Squares Alignment (Closed-form)
+    # s = Cov(pred, gt) / Var(pred)
+    numerator = torch.sum(d_pred_centered * d_gt_centered)
+    denominator = torch.sum(d_pred_centered ** 2)
+
+    if denominator < eps:
+        s = torch.tensor(0.0, device=d_pred.device)
+    else:
+        s = numerator / denominator
+
+    # t = mean_gt - s * mean_pred
+    t = mu_gt - s * mu_pred
+
+    # 4. Rectification & Error
+    d_pred_aligned = s * d_pred + t
+    
+    mse = torch.mean((d_pred_aligned - d_gt) ** 2)
+    rmse = torch.sqrt(mse)
+
+    return rmse.item()
 
 def TemporalFlickering(gen_frames: Tensor, gen_flows: Tensor, device):  # noqa: ANN201
     """Measure temporal flickering using warping consistency with optical flow.

@@ -1,6 +1,6 @@
 import gradio as gr
 
-from ..utils.hf import handle_submit
+from ...utils.hf import handle_submit
 
 def create_submission_tab(hf_token, submission_repo, output_dir):
     with gr.TabItem("📤 Submission"):

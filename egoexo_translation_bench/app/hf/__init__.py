@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 
-from configs import CONFIG, CONFIG_DIR
+from ...configs import CONFIG, CONFIG_DIR
 
 RESULT_DIR = Path("output")
 ASSETS_DIR = Path("assets")

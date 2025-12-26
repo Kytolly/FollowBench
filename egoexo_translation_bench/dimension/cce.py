@@ -2,8 +2,10 @@
 
 from typing import Any
 from torch import Tensor
+import logging
+logger = logging.getLogger(__name__)
 
-from . import DimensionEvaluator
+from ..dimension import DimensionEvaluator
 from .metric import CameraCenteringError
 from ..utils.pretrain import get_detection_results, load_faster_rcnn
 
@@ -15,12 +17,12 @@ class CameraCenteringErrorEvaluator(DimensionEvaluator):
     centrally the detected person is positioned in each frame.
     """
 
-    def prepare(self) -> None:  # noqa: ANN201, ANN101
+    def prepare(self):  # noqa: ANN201, ANN101
         """Load the detector and call base prepare."""
         self.model = load_faster_rcnn(self.device)
         super().prepare()
 
-    def compute(self, **kwargs: Any) -> float:  # noqa: ANN201, ANN101
+    def compute(self, **kwargs: Any):  # noqa: ANN201, ANN101
         """Compute CCE for generated video.
 
         Expected kwargs: 'tensor_gen', 'video_id', 'global_cache'. Returns a float

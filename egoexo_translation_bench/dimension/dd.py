@@ -1,9 +1,10 @@
 """Dynamic-degree evaluator utilities (DD)."""
 
 from typing import Any, Set
+import logging
+logger = logging.getLogger(__name__)
 
-
-from . import DimensionEvaluator
+from ..dimension import DimensionEvaluator
 from .metric import calculate_metrics_based_flow_model
 from ..utils.pretrain import load_raft
 
@@ -17,7 +18,7 @@ class DynamicDegreeEvaluator(DimensionEvaluator):
     result dict.
     """
 
-    def prepare(self) -> None:  # noqa: ANN201, ANN101
+    def prepare(self):  # noqa: ANN201, ANN101
         """Load RAFT model onto the configured device and call superclass prepare.
 
         Notes:
@@ -28,7 +29,7 @@ class DynamicDegreeEvaluator(DimensionEvaluator):
         self.model = load_raft(self.device)
         super().prepare()
 
-    def compute(self, **kwargs: Any) -> float:  # noqa: ANN201, ANN101
+    def compute(self, **kwargs: Any):  # noqa: ANN201, ANN101
         """Compute DD for a single video.
 
         Args:

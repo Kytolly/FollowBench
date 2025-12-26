@@ -7,6 +7,7 @@ used throughout the benchmark evaluation pipeline.
 import torch
 from torch import Tensor
 from typing import Optional
+from scipy.stats import pearsonr
 
 
 def p_corr(x: Tensor, y: Tensor, device: Optional[str] = None) -> Tensor:

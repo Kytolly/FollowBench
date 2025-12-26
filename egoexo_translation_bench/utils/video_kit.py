@@ -7,13 +7,13 @@ analysis, and video property validation.
 
 import cv2
 import numpy as np
-from scipy.stats import pearsonr
-import torch
-from torch import Tensor
 from typing import List, Optional, Dict, Any, Union, Tuple
 from pathlib import Path
 
+import torch
+from torch import Tensor
 
+    
 def get_video_frames(video_path: Union[str, Path], max_frames: int = 60) -> List[np.ndarray]:
     """Extract frames from a video file.
     

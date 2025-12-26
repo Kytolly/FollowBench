@@ -1,6 +1,8 @@
 from typing import Any
+import logging
+logger = logging.getLogger(__name__)
 
-from . import DimensionEvaluator
+from ..dimension import DimensionEvaluator
 from ..utils.pretrain import load_i3d
 from ..utils.video_kit import extract_i3d_features
 from .metric import FrechetVideoDistance
@@ -14,7 +16,7 @@ class FrechetVideoDistanceEvaluator(DimensionEvaluator):
     `global_cache` if provided to avoid redundant computation.
     """
 
-    def prepare(self) -> None:  # noqa: ANN201, ANN101
+    def prepare(self):  # noqa: ANN201, ANN101
         """Load the I3D model onto the evaluator device and call superclass prepare.
 
         Notes:
@@ -23,7 +25,7 @@ class FrechetVideoDistanceEvaluator(DimensionEvaluator):
         self.model = load_i3d(self.device)
         super().prepare()
 
-    def compute(self, **kwargs: Any) -> float:  # noqa: ANN201, ANN101
+    def compute(self, **kwargs: Any):  # noqa: ANN201, ANN101
         """Compute FVD between generated and ground-truth videos.
 
         Args:

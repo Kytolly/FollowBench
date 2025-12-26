@@ -7,20 +7,22 @@ flow.
 
 from torchvision.models.optical_flow import raft_small, Raft_Small_Weights
 from typing import Any
+import logging
+logger = logging.getLogger(__name__)
 
-from . import DimensionEvaluator
+from ..dimension import DimensionEvaluator
 from .metric import calculate_metrics_based_flow_model
 from ..utils.pretrain import load_raft
 
 class TemporalFlickeringEvaluator(DimensionEvaluator):
     """Evaluator for Temporal Flickering (TF) using optical-flow warping."""
 
-    def prepare(self) -> None:
+    def prepare(self):
         """Load RAFT model and call base prepare."""
         self.model = load_raft(self.device)
         super().prepare()
 
-    def compute(self, **kwargs: Any) -> float:
+    def compute(self, **kwargs: Any):
         """Compute TF metric for the given video using cached or computed flows.
 
         Expected kwargs: 'tensor_gen', 'video_id', 'global_cache', optional

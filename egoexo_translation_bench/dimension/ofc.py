@@ -1,8 +1,10 @@
 """Optical-flow based evaluators utilities."""
 
 from typing import Any, Set
+import logging
+logger = logging.getLogger(__name__)
 
-from . import DimensionEvaluator
+from ..dimension import DimensionEvaluator
 from .metric import calculate_metrics_based_flow_model
 from ..utils.pretrain import load_raft
 
@@ -10,12 +12,12 @@ from ..utils.pretrain import load_raft
 class OpticalFlowCorrelationEvaluator(DimensionEvaluator):
     """Evaluator for Optical Flow Correlation (OFC) between generated and GT videos."""
 
-    def prepare(self) -> None:  # noqa: ANN201, ANN101
+    def prepare(self):  # noqa: ANN201, ANN101
         """Load RAFT model and call base prepare."""
         self.model = load_raft(self.device)
         super().prepare()
 
-    def compute(self, **kwargs: Any) -> float:  # noqa: ANN201, ANN101
+    def compute(self, **kwargs: Any):  # noqa: ANN201, ANN101
         """Compute OFC for a generated video, optionally using cached flows.
 
         Expected kwargs: 'tensor_gen', 'gt_frames', 'video_id', 'global_cache'.

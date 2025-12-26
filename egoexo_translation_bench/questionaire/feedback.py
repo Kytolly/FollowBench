@@ -8,9 +8,9 @@ from pathlib import Path
 from huggingface_hub import HfApi, upload_file
 from filelock import FileLock
 
-from . import (
+from ..questionaire import (
     HF_TOKEN,
-    FEEDBACK_REPO,
+    FEEDBACK_REPO
 )
 
 class FeedbackSaver:

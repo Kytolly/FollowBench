@@ -1,7 +1,9 @@
 from typing import Any
 from torch import Tensor
+import logging
+logger = logging.getLogger(__name__)
 
-from . import DimensionEvaluator
+from ..dimension import DimensionEvaluator
 from .metric import HumanActionAlignment
 from ..utils.pretrain import get_keypoint_results, load_keypoint_rcnn
 
@@ -14,7 +16,7 @@ class HumanActionAlignmentEvaluator(DimensionEvaluator):
     HAA metric using `HumanActionAlignment`.
     """
 
-    def prepare(self) -> None:  # noqa: ANN201, ANN101
+    def prepare(self):  # noqa: ANN201, ANN101
         """Load the keypoint detection model and call superclass prepare.
 
         Notes:
@@ -23,7 +25,7 @@ class HumanActionAlignmentEvaluator(DimensionEvaluator):
         self.model = load_keypoint_rcnn(self.device)
         super().prepare()
 
-    def compute(self, **kwargs: Any) -> float:  # noqa: ANN201, ANN101
+    def compute(self, **kwargs: Any):  # noqa: ANN201, ANN101
         """Compute HAA for a single video pair.
 
         Args:

@@ -40,15 +40,15 @@ class DimensionEvaluator():
 
     Subclasses should implement :meth:`compute` and may override :meth:`prepare`.
     """
-    def __init__(self, device: str) -> None:
+    def __init__(self, device: str):
         self.device: str = device
         self.model: Optional[Any] = None
         
-    def prepare(self) -> None:
+    def prepare(self):
         """Prepare internal models or state for evaluation."""
         logger.info(f"{self.__class__.__name__} prepared!")
     
-    def compute(self, **kwargs) -> float:
+    def compute(self, **kwargs):
         """Compute the metric for a single case.
 
         Returns:

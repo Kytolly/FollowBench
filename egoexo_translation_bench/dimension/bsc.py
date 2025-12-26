@@ -2,11 +2,13 @@
 
 from PIL import Image
 from typing import Any
+import logging
+logger = logging.getLogger(__name__)
 
 from transformers import CLIPProcessor, CLIPModel
 from torchvision.models.detection import fasterrcnn_resnet50_fpn, FasterRCNN_ResNet50_FPN_Weights
 
-from . import DimensionEvaluator
+from ..dimension import DimensionEvaluator
 from .metric import BackgroundSemanticConsistency
 from ..utils.pretrain import get_detection_results, load_clip, load_faster_rcnn
 
@@ -17,13 +19,13 @@ class BackgroundSemanticConsistencyEvaluator(DimensionEvaluator):
     are masked out using a detector to focus on background semantics.
     """
 
-    def prepare(self) -> None:
+    def prepare(self):
         """Load CLIP and detector models and call base prepare."""
         self.clip, self.proc = load_clip(self.device)
         self.det = load_faster_rcnn(self.device)
         super().prepare()
 
-    def compute(self, **kwargs: Any) -> float:
+    def compute(self, **kwargs: Any):
         """Compute background semantic consistency for a generated video.
 
         Expected kwargs: 'tensor_gen', 'pillow_ref', 'video_id', 'global_cache'

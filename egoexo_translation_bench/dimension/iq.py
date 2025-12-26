@@ -1,8 +1,10 @@
 """Imaging-quality evaluator utilities (MUSIQ)."""
 
 from typing import Any
+import logging
+logger = logging.getLogger(__name__)
 
-from . import DimensionEvaluator
+from ..dimension import DimensionEvaluator
 from ..utils.pretrain import load_musiq
 from .metric import ImagingQuality
 
@@ -13,7 +15,7 @@ class ImagingQualityEvaluator(DimensionEvaluator):
     Uses a pretrained MUSIQ model to evaluate image/video perceptual quality.
     """
 
-    def prepare(self) -> None:  # noqa: ANN201
+    def prepare(self):  # noqa: ANN201
         """Load the MUSIQ model onto the configured device and call superclass prepare.
 
         The method stores the loaded model on ``self.model`` and then calls
@@ -22,7 +24,7 @@ class ImagingQualityEvaluator(DimensionEvaluator):
         self.model = load_musiq(self.device)
         super().prepare()
 
-    def compute(self, **kwargs: Any) -> float:  # noqa: ANN201
+    def compute(self, **kwargs: Any):  # noqa: ANN201
         """Compute IQ for the generated video.
 
         Args:
