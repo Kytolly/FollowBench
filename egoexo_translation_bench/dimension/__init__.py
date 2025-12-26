@@ -56,12 +56,13 @@ class DimensionEvaluator():
         """
         raise NotImplementedError
     
-    def clear(self) -> None:
+    def clear(self):
         """Release any heavy resources (models, GPU memory)."""
         if self.model is not None:
             del self.model
             self.model = None
         gpu.clear_gpu_memory()
+        logger.info(f"{self.__class__.__name__} VRAM cleared!")
 
 class BenchRouter():
     """
@@ -220,7 +221,7 @@ class BenchRouter():
         finally:
             if 'evaluator' in locals(): evaluator.clear()
 
-    def _clear_cache_for_metric(self, metric_name: str) -> None:
+    def _clear_cache_for_metric(self, metric_name: str):
         """Clear metric-specific keys from the global cache.
 
         Args:

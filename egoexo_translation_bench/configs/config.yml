@@ -3,6 +3,8 @@ test:
   repo_feeaback_id : "Kytolly/feedback_Ego2ExoFollowCamera"
   repo_submission_id: "Kytolly/submission_Ego2ExoFollowCamera"
   path_assets: "assets/"
+  models:
+    wham_vit_h: "assets/models/wham_vit_h.pth"
   rules:
     clip_len: 300
     fps: 60

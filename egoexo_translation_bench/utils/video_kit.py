@@ -13,6 +13,20 @@ from pathlib import Path
 import torch
 from torch import Tensor
 
+def pool_global_motion(dense_flow: torch.Tensor) -> Tensor:
+    """
+    将稠密光流聚合并为全局相机运动向量。
+    该操作在 GPU 上极快，无需数据回传 CPU。
+    
+    Args:
+        dense_flow: [B, 2, H, W] RAFT output tensor (B=T-1)
+    Returns:
+        global_motion: [B, 2] (mean_dx, mean_dy)
+    """
+    # 在空间维度 (H, W) 上做平均池化
+    # dim=2,3 对应 H,W
+    return torch.mean(dense_flow, dim=[2, 3])
+
     
 def get_video_frames(video_path: Union[str, Path], max_frames: int = 60) -> List[np.ndarray]:
     """Extract frames from a video file.
@@ -74,50 +88,50 @@ def calculate_optical_flow_magnitude(frames: List[np.ndarray]) -> List[float]:
         
     return mags
 
-
-def get_motion_series(frames: List[np.ndarray]) -> Tuple[np.ndarray, np.ndarray]:
-    """Extract global motion series from video frames.
+# THIS FUNCTION WILL BE DISCARDED
+# def get_motion_series(frames: List[np.ndarray]) -> Tuple[np.ndarray, np.ndarray]:
+#     """Extract global motion series from video frames.
     
-    Computes dense optical flow between consecutive frames and extracts
-    the average motion in x and y directions, representing global camera motion.
+#     Computes dense optical flow between consecutive frames and extracts
+#     the average motion in x and y directions, representing global camera motion.
     
-    Args:
-        frames: List of video frames as numpy arrays in RGB format [H, W, C]
+#     Args:
+#         frames: List of video frames as numpy arrays in RGB format [H, W, C]
         
-    Returns:
-        Tuple of (motion_x, motion_y) as numpy arrays representing
-        average motion in x and y directions for each frame transition
+#     Returns:
+#         Tuple of (motion_x, motion_y) as numpy arrays representing
+#         average motion in x and y directions for each frame transition
         
-    Raises:
-        IndexError: If frames list is empty
-    """
-    if not frames:
-        return np.array([]), np.array([])
+#     Raises:
+#         IndexError: If frames list is empty
+#     """
+#     if not frames:
+#         return np.array([]), np.array([])
         
-    # Convert first frame to grayscale
-    prev_gray = cv2.cvtColor(frames[0], cv2.COLOR_RGB2GRAY)
-    motion_x = []
-    motion_y = []
+#     # Convert first frame to grayscale
+#     prev_gray = cv2.cvtColor(frames[0], cv2.COLOR_RGB2GRAY)
+#     motion_x = []
+#     motion_y = []
     
-    for i in range(1, len(frames)):
-        curr_gray = cv2.cvtColor(frames[i], cv2.COLOR_RGB2GRAY)
+#     for i in range(1, len(frames)):
+#         curr_gray = cv2.cvtColor(frames[i], cv2.COLOR_RGB2GRAY)
         
-        # Compute dense optical flow using Farneback algorithm
-        flow = cv2.calcOpticalFlowFarneback(
-            prev_gray, curr_gray, None, 
-            0.5, 3, 15, 3, 5, 1.2, 0
-        )
+#         # Compute dense optical flow using Farneback algorithm
+#         flow = cv2.calcOpticalFlowFarneback(
+#             prev_gray, curr_gray, None, 
+#             0.5, 3, 15, 3, 5, 1.2, 0
+#         )
         
-        # Calculate average optical flow (represents global/camera motion)
-        avg_dx = np.mean(flow[..., 0])
-        avg_dy = np.mean(flow[..., 1])
+#         # Calculate average optical flow (represents global/camera motion)
+#         avg_dx = np.mean(flow[..., 0])
+#         avg_dy = np.mean(flow[..., 1])
         
-        motion_x.append(avg_dx)
-        motion_y.append(avg_dy)
+#         motion_x.append(avg_dx)
+#         motion_y.append(avg_dy)
         
-        prev_gray = curr_gray
+#         prev_gray = curr_gray
         
-    return np.array(motion_x), np.array(motion_y)
+#     return np.array(motion_x), np.array(motion_y)
 
 
 def load_video_as_tensor(video_path: Union[str, Path]) -> Tensor:

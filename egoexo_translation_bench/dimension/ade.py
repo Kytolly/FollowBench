@@ -1,14 +1,15 @@
-from torch import Tensor
-from torchvision.models.detection import fasterrcnn_resnet50_fpn, FasterRCNN_ResNet50_FPN_Weights
 from typing import Any
 import logging
 logger = logging.getLogger(__name__)
 
-from ..dimension import DimensionEvaluator
-from .metric import TrajectoryAlignment
+from torch import Tensor
+from torchvision.models.detection import fasterrcnn_resnet50_fpn, FasterRCNN_ResNet50_FPN_Weights
+
+from . import DimensionEvaluator
+from .metric import AverageDisplacementError
 from ..utils.pretrain import get_detection_results, load_faster_rcnn
 
-class TrajectoryAlignmentEvaluator(DimensionEvaluator):
+class AverageDisplacementErrorEvaluator(DimensionEvaluator):
     """Evaluator for trajectory alignment between generated and GT videos."""
 
     def prepare(self):
@@ -44,4 +45,8 @@ class TrajectoryAlignmentEvaluator(DimensionEvaluator):
             if global_cache is not None: global_cache[gt_key] = det_gt
 
         H, W = video_gen.shape[2], video_gen.shape[3]
-        return float(TrajectoryAlignment(det_gen, det_gt, H, W))
+        return float(AverageDisplacementError(det_gen, det_gt, H, W))
+    
+    def clear(self):
+        del self.det
+        super().clear()

@@ -26,7 +26,10 @@ globals()["CONFIG_DIR"] = str(_CONFIGS_DIR)
 # -----------------------------------------------------------------------------
 # 1. 定义配置 Schema
 # -----------------------------------------------------------------------------
-
+@dataclass
+class ModelsConfig:
+    wham_vit_h: int = "assets/models/wham_vit_h.pth"
+    
 @dataclass
 class RulesConfig:
     clip_len: int = 300
@@ -54,6 +57,7 @@ class BaseEnvConfig:
     # 这里的默认路径现在会被解析为 PROJECT_ROOT/assets/
     path_assets: str = "assets/"
     
+    models: ModelsConfig = field(default_factory=ModelsConfig)
     rules: RulesConfig = field(default_factory=RulesConfig)
     submission: SubmissionConfig = field(default_factory=SubmissionConfig)
 

@@ -9,7 +9,11 @@ import torch.nn.functional as F
 from torchvision.transforms.functional import to_pil_image
 from typing import Any, Optional, Set
 
-from ..utils.math import p_corr
+from ..utils.math import(
+    p_corr,
+    axis_angle_to_matrix,
+    wrap_to_pi
+)
 from ..utils.video_kit import get_traj, compute_flow
 from . import metric
 
@@ -189,6 +193,158 @@ def CameraCenteringError(detection_results: Any, H: int, W: int):  # noqa: ANN20
     return sum(errors) / len(errors) if errors else 1.0
 
 
+def CameraSubjectHeadingAlignment(
+    cam_pos: torch.Tensor,
+    subj_pos: torch.Tensor,
+    subj_orient_aa: torch.Tensor,
+    forward_axis: str = '+z'
+):
+    """
+    CSHA 核心计算逻辑。
+    
+    Args:
+        cam_pos: [T, 3] 相机世界坐标
+        subj_pos: [T, 3] 主角 Root 世界坐标
+        subj_orient_aa: [T, 3] 主角 Root 旋转 (Axis-Angle)
+        forward_axis: SMPL 默认 T-pose 前向通常是 +z
+        
+    Returns:
+        dict: {
+            "stability_error": float, (圆周标准差)
+            "locking_error": float, (与正后方的偏差)
+            "azimuth_seq": Tensor (角度序列，用于可视化)
+        }
+    """
+    T = cam_pos.shape[0]
+    
+    # 1. 计算主角朝向向量 (Subject Forward Vector)
+    # R_subj: [T, 3, 3]
+    R_subj = axis_angle_to_matrix(subj_orient_aa)
+    
+    # 定义局部坐标系下的前向向量 [0, 0, 1]
+    local_forward = torch.tensor([0.0, 0.0, 1.0], device=cam_pos.device).view(1, 3, 1)
+    if forward_axis == '-z':
+        local_forward = -local_forward
+        
+    # 变换到世界坐标系: v_subj = R * v_local
+    # [T, 3, 3] @ [T, 3, 1] -> [T, 3, 1] -> [T, 3]
+    v_subj_3d = torch.matmul(R_subj, local_forward.repeat(T, 1, 1)).squeeze(-1)
+    
+    # 投影到 XZ 平面 (Ground Plane)
+    v_subj_2d = v_subj_3d[:, [0, 2]] # [x, z]
+    
+    # 2. 计算相机方位向量 (Camera Position Vector relative to Subject)
+    # D = P_cam - P_subj
+    D_3d = cam_pos - subj_pos
+    v_cam_2d = D_3d[:, [0, 2]] # [x, z]
+    
+    # 3. 计算角度 (Atan2)
+    # atan2(z, x) 注意参数顺序 (y, x) -> (z, x)
+    theta_subj = torch.atan2(v_subj_2d[:, 1], v_subj_2d[:, 0])
+    theta_cam = torch.atan2(v_cam_2d[:, 1], v_cam_2d[:, 0])
+    
+    # 4. 相对方位角 (Relative Azimuth)
+    # phi = wrap(theta_cam - theta_subj)
+    phi = wrap_to_pi(theta_cam - theta_subj)
+    
+    # 5. 计算指标
+    
+    # A. 稳定性误差 (Circular Standard Deviation)
+    # R_bar = (1/T) * sum( exp(i * phi) )
+    cos_sum = torch.sum(torch.cos(phi))
+    sin_sum = torch.sum(torch.sin(phi))
+    R_bar_len = torch.sqrt(cos_sum**2 + sin_sum**2) / T
+    
+    # 防止 log(0)
+    R_bar_len = torch.clamp(R_bar_len, min=1e-6, max=1.0 - 1e-6)
+    csha_stability = torch.sqrt(-2 * torch.log(R_bar_len))
+    
+    # B. 锁定误差 (Locking Error to pi/180 degrees)
+    # 理想情况下 phi 应该接近 pi 或 -pi
+    csha_lock = torch.mean(torch.abs(wrap_to_pi(phi - torch.pi)))
+    
+    return {
+        "stability_score": csha_stability.item(),
+        "locking_score": csha_lock.item(),
+        "azimuth_series": phi
+    }
+
+
+def CameraTrajectoryError(
+    traj_gen: torch.Tensor, 
+    traj_gt: torch.Tensor,
+    eps: float = 1e-6
+):
+    """
+    计算 CTE (Camera Trajectory Error) 的核心数学实现。
+    使用 Umeyama 算法求解 Sim(3) 变换 (s, R, t) 并计算对齐后的 RMSE。
+
+    Args:
+        traj_gen: 生成视频的相机轨迹坐标 [N, 3] (Translation Vectors)
+        traj_gt:  真实视频的相机轨迹坐标 [N, 3] (Translation Vectors)
+        eps: 数值稳定性常数
+
+    Returns:
+        float: CTE Score (RMSE after alignment)
+    """
+    assert traj_gen.shape == traj_gt.shape, f"Shape mismatch: {traj_gen.shape} vs {traj_gt.shape}"
+    N, D = traj_gen.shape  # N frames, D=3 dimensions
+
+    # 1. 去中心化 (Centering)
+    mu_gen = torch.mean(traj_gen, dim=0, keepdim=True) # [1, 3]
+    mu_gt = torch.mean(traj_gt, dim=0, keepdim=True)   # [1, 3]
+
+    y = traj_gen - mu_gen # [N, 3] (对应公式中的 y_i)
+    q = traj_gt - mu_gt   # [N, 3] (对应公式中的 q_i)
+
+    # 2. 计算协方差矩阵 (Covariance Matrix)
+    # H = sum(y_i * q_i^T) -> [D, D]
+    H = torch.matmul(y.transpose(0, 1), q) 
+
+    # 3. SVD 分解求解旋转 R
+    # H = U @ Sigma @ V.T
+    U, _, Vh = torch.linalg.svd(H) 
+    V = Vh.mH # PyTorch svd returns V^H (conjugate transpose), so V = Vh.mH
+    
+    # R = V @ S @ U.T
+    # 构造修正矩阵 S (diag(1, 1, det))
+    d = torch.det(torch.matmul(V, U.transpose(0, 1)))
+    S_mat = torch.eye(D, device=traj_gen.device)
+    S_mat[-1, -1] = d 
+    
+    R = torch.matmul(torch.matmul(V, S_mat), U.transpose(0, 1)) # [3, 3]
+
+    # 4. 求解缩放 s (Scale)
+    # s = sum(y^T R^T q) / sum(|y|^2)
+    # 分子: trace(R^T @ y^T @ q) ??? 
+    # 更简单的写法: sum element-wise product of (y @ R.T) and q
+    y_rotated = torch.matmul(y, R.transpose(0, 1)) # [N, 3]
+    
+    numerator = torch.sum(y_rotated * q)
+    denominator = torch.sum(y * y)
+    
+    if denominator < eps:
+        s = torch.tensor(1.0, device=traj_gen.device)
+    else:
+        s = numerator / denominator
+
+    # 5. 求解平移 t (Translation)
+    # t = mu_gt - s * R * mu_gen
+    # 注意维度: [1, 3] - s * [1, 3] @ [3, 3]^T 
+    t = mu_gt - s * torch.matmul(mu_gen, R.transpose(0, 1))
+
+    # 6. 变换生成的轨迹 (Apply Transform)
+    # p_hat = s * p_gen @ R^T + t
+    traj_gen_aligned = s * torch.matmul(traj_gen, R.transpose(0, 1)) + t
+
+    # 7. 计算 CTE (RMSE)
+    diff = traj_gt - traj_gen_aligned
+    mse = torch.mean(torch.sum(diff ** 2, dim=1))
+    cte = torch.sqrt(mse)
+
+    return cte.item()
+
+
 def DynamicDegree(gen_flows: Tensor):  # noqa: ANN201
     """Compute Dynamic Degree (DD) as the mean optical-flow magnitude.
 
@@ -323,7 +479,7 @@ def MotionSmoothness(gen_flows: Tensor):  # noqa: ANN201
     return ms
 
 
-def OpticalFlowCorrelation(gen_flows: Tensor, gt_flows: Tensor, device: Any):  # noqa: ANN201
+def OpticalFlowCorrelation(motion_gen: Tensor, motion_gt: Tensor):  # noqa: ANN201
     """Compute correlation between generated and ground-truth optical flow motions.
 
     The function averages per-frame displacement vectors and computes Pearson
@@ -337,17 +493,17 @@ def OpticalFlowCorrelation(gen_flows: Tensor, gt_flows: Tensor, device: Any):  #
     Returns:
         Mean correlation value (float) between -1 and 1.
     """
-    min_len = min(len(gen_flows), len(gt_flows))
-    g_flow = gen_flows[:min_len]
-    t_flow = gt_flows[:min_len]
-
-    g_motion = g_flow.mean(dim=[2, 3])  # [t, 2]
-    t_motion = t_flow.mean(dim=[2, 3])  # [t, 2]
+    # 长度对齐
+    min_len = min(motion_gen.shape[0], motion_gt.shape[0])
+    if min_len < 2:
+        return 0.0
     
-    corr_x = p_corr(g_motion[:, 0], t_motion[:, 0], device)
-    corr_y = p_corr(g_motion[:, 1], t_motion[:, 1], device)
-    ofc = ((corr_x + corr_y) / 2.0).item()
-    return ofc
+    m_gen = motion_gen[:min_len].flatten() # [ (T-1)*2 ]
+    m_gt = motion_gt[:min_len].flatten()   # [ (T-1)*2 ]
+    
+    # 计算余弦相似度
+    score = F.cosine_similarity(m_gen.unsqueeze(0), m_gt.unsqueeze(0)).item()
+    return score
 
 
 def SideBySideDepthConsistency(
@@ -405,6 +561,58 @@ def SideBySideDepthConsistency(
 
     return rmse.item()
 
+
+def SubjectCameraDistanceError(
+    depth_gen: torch.Tensor, 
+    depth_gt: torch.Tensor,
+    eps: float = 1e-6
+):
+    """
+    计算 SCDE (Subject-Camera Distance Error) 的数学核心。
+    
+    对应公式:
+        1. 寻找最佳缩放 s: s_hat = sum(z_gen * z_gt) / sum(z_gen^2)
+        2. 校正: z_gen_hat = s_hat * z_gen
+        3. 误差: RMSE(z_gen_hat - z_gt)
+    
+    Args:
+        depth_gen: 生成视频的深度/距离序列 [T] (z_gen)
+        depth_gt:  真值视频的深度/距离序列 [T] (z_gt)
+    
+    Returns:
+        float: Scale-Aligned RMSE
+    """
+    # 1. 确保输入为一维向量
+    z_gen = depth_gen.flatten().float()
+    z_gt = depth_gt.flatten().float()
+    
+    if z_gen.numel() != z_gt.numel():
+        min_len = min(z_gen.numel(), z_gt.numel())
+        z_gen = z_gen[:min_len]
+        z_gt = z_gt[:min_len]
+
+    # 2. 最小二乘法计算尺度因子 s (Scale Alignment)
+    # Numerator: sum(z_gen * z_gt)
+    numerator = torch.sum(z_gen * z_gt)
+    # Denominator: sum(z_gen^2)
+    denominator = torch.sum(z_gen ** 2)
+    
+    if denominator < eps:
+        s_hat = torch.tensor(1.0, device=z_gen.device)
+    else:
+        s_hat = numerator / denominator
+
+    # 3. 校正生成序列 (Rectification)
+    # 此时 z_gen_hat 和 z_gt 在同一个量纲下
+    z_gen_aligned = s_hat * z_gen
+    
+    # 4. 计算 RMSE (Scale-Aligned RMSE)
+    mse = torch.mean((z_gen_aligned - z_gt) ** 2)
+    scde = torch.sqrt(mse)
+    
+    return scde.item()
+    
+    
 def TemporalFlickering(gen_frames: Tensor, gen_flows: Tensor, device):  # noqa: ANN201
     """Measure temporal flickering using warping consistency with optical flow.
 
@@ -456,7 +664,25 @@ def TemporalFlickering(gen_frames: Tensor, gen_flows: Tensor, device):  # noqa: 
     return tf
 
 
-def TrajectoryAlignment(gen_results, gt_results, H, W):  # noqa: ANN201
+def TrajectorySmoothness(global_motion: Tensor):
+    """
+    基于全局运动向量计算轨迹平滑度。
+    Input: [T-1, 2] velocity vectors (dx, dy)
+    Metric: Mean magnitude of acceleration.
+    """
+    if global_motion.shape[0] < 2:
+        return 0.0
+    
+    # 1. 计算加速度 (二阶差分): a_t = v_t - v_{t-1}
+    # global_motion 本身已经是 v_t
+    acc = global_motion[1:] - global_motion[:-1] # [T-2, 2]
+    
+    # 2. 计算模长并取平均
+    score = torch.mean(torch.norm(acc, p=2, dim=1))
+    return score.item()
+
+
+def AverageDisplacementError(gen_results, gt_results, H, W):  # noqa: ANN201
     """Measure alignment between generated and ground-truth trajectories.
 
     Computes normalized per-frame distances between trajectories (center points
@@ -507,10 +733,10 @@ def ViewpointValidity(detection_results: Any):  # noqa: ANN201
 
 def calculate_metrics_based_flow_model(  # noqa: ANN201
     gen_frames: Tensor,
-    gt_frames: Optional[Tensor] = None,
+    gt_frames: Tensor = None,
     metrics_to_compute: Optional[Set[str]] = None,
-    flow_model: Any = None,
-    device: Any = None,
+    flow_model: torch.nn.Module = None,
+    device: str = "cuda",
     video_id: Any = None,
     global_cache: Any = None,
 ):
@@ -550,16 +776,23 @@ def calculate_metrics_based_flow_model(  # noqa: ANN201
             global_cache[gen_flow_key] = gen_flows
 
     if gen_flows is None:
-        return {'tf': 0.0, 'ms': 0.0, 'dd': 0.0, 'ofc': 0.0}
+        return {'tf': 0.0, 'ms': 0.0, 'dd': 0.0, 'ofc': 0.0, 'ts': 0.0}
     
     results = {}
     if 'dd' in metrics_to_compute:
-        results['dd'] = metric.DynamicDegree(gen_flows)
+        results['dd'] = DynamicDegree(gen_flows)
     if 'ms' in metrics_to_compute:
-        results['ms'] = metric.MotionSmoothness(gen_flows)
+        results['ms'] = MotionSmoothness(gen_flows)
     if 'tf' in metrics_to_compute:
-        results['tf'] = metric.TemporalFlickering(gen_frames, gen_flows, device)
+        results['tf'] = TemporalFlickering(gen_frames, gen_flows, device)
+    
+    if 'ts' in metrics_to_compute:
+        # 全局运动池化 (Global Average Pooling)
+        global_motion_gen = torch.mean(gen_flows, dim=[2, 3])
 
+        # 计算 TS 分数
+        results['ts'] = TrajectorySmoothness(global_motion_gen)
+    
     if 'ofc' in metrics_to_compute and gt_frames is not None:
         # 2. GT Flow (缓存读写)
         gt_flow_key = f"flow_gt_{video_id}"
@@ -575,7 +808,8 @@ def calculate_metrics_based_flow_model(  # noqa: ANN201
                 gt_flows = None
 
         if gt_flows is not None:
-            results['ofc'] = metric.OpticalFlowCorrelation(gen_flows, gt_flows, device)
+            global_motion_gen = torch.mean(gen_flows, dim=[2, 3])
+            results['ofc'] = OpticalFlowCorrelation(global_motion_gen, gt_flows, device)
         else:
             results['ofc'] = 0.0
 
