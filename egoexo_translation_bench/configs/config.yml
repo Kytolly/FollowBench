@@ -4,7 +4,7 @@ test:
   repo_submission_id: "Kytolly/submission_Ego2ExoFollowCamera"
   path_assets: "assets/"
   models:
-    wham_vit_h: "assets/models/wham_vit_h.pth"
+    wham_vit_h: "third-party/WHAM/checkpoints/wham_vit_bedlam_w_3dpw.pth.tar"
   rules:
     clip_len: 300
     fps: 60

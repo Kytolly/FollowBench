@@ -215,3 +215,4 @@ configs/config.yml
 .env.*
 !.env.example 
 .VSCodeCounter/
+third-party/
