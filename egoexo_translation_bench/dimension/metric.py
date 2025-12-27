@@ -45,6 +45,29 @@ def AestheticQuality(video_gen: Tensor, aq_model: Any, batch_size: int = 8):  # 
     return all_scores.mean().item()
 
 
+def AppearanceConsistency(embeddings_gen: torch.Tensor, embedding_ref: torch.Tensor):
+    """
+    计算外观一致性分数 (Cosine Similarity)。
+    
+    Args:
+        embeddings_gen: [T, D] 生成视频每一帧的人物特征向量
+        embedding_ref:  [1, D] 参考图的人物特征向量
+        
+    Returns:
+        float: 平均余弦相似度
+    """
+    # 1. 归一化特征向量 (L2 Norm)
+    embeddings_gen = F.normalize(embeddings_gen, p=2, dim=-1)
+    embedding_ref = F.normalize(embedding_ref, p=2, dim=-1)
+    
+    # 2. 计算余弦相似度 (Dot Product)
+    # [T, D] * [D, 1] -> [T, 1]
+    sim_scores = torch.mm(embeddings_gen, embedding_ref.transpose(0, 1))
+    
+    # 3. 计算均值
+    return float(sim_scores.mean().item())
+
+
 def AverageDisplacementError(gen_results, gt_results, H, W):  # noqa: ANN201
     """Measure alignment between generated and ground-truth trajectories.
 
@@ -153,21 +176,43 @@ def CameraCenteringError(detection_results: Any, H: int, W: int):  # noqa: ANN20
     Returns:
         Mean normalized centering error in [0.0, 1.0] (1.0 worst).
     """
-    errors = []
-    center_frame = torch.tensor([W / 2.0, H / 2.0])
-    max_dist = torch.sqrt((center_frame[0])**2 + (center_frame[1])**2)
+    if not detection_results:
+        return 1.0
+
+    # 确定计算使用的设备 (优先 GPU)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
+    # 1. 定义画面中心点
+    center_frame = torch.tensor([W / 2.0, H / 2.0], device=device)
+    # 使用半对角线长度作为归一化基准 (最大可能距离)
+    max_dist = torch.sqrt(center_frame[0]**2 + center_frame[1]**2)
+    
+    errors = []
     for res in detection_results:
+        # 2. 惩罚机制：如果该帧未检测到人，误差计为最大值 1.0
         if res is None:
-            errors.append(1.0)
+            errors.append(torch.tensor(1.0, device=device))
             continue
         
-        box, _ = res
-        center_box = torch.tensor([(box[0] + box[2]) / 2.0, (box[1] + box[3]) / 2.0])
-        dist = torch.dist(center_box, center_frame)
-        errors.append((dist / max_dist).item())
+        # 提取 Bbox Tensor (假设格式为 [x1, y1, x2, y2])
+        box = res[0] if isinstance(res, (list, tuple)) else res
+        box = box.to(device)
         
-    return sum(errors) / len(errors) if errors else 1.0
+        # 3. 计算 Box 中心点
+        center_box = torch.tensor([
+            (box[0] + box[2]) / 2.0, 
+            (box[1] + box[3]) / 2.0
+        ], device=device)
+        
+        # 4. 计算欧式距离并归一化
+        dist = torch.dist(center_box, center_frame)
+        errors.append(torch.clamp(dist / max_dist, max=1.0))
+    
+    if not errors:
+        return 1.0
+        
+    # 5. 返回全视频平均误差
+    return float(torch.stack(errors).mean().item())
 
 
 def CameraSubjectHeadingAlignment(

@@ -11,9 +11,15 @@ from torchvision.models.detection import (
 )
 from torchvision.models.optical_flow import raft_large, Raft_Large_Weights
 from pytorchvideo.models.resnet import create_resnet
-from transformers import CLIPProcessor, CLIPModel
-from transformers import AutoImageProcessor, AutoModelForDepthEstimation
-
+import torch.nn.functional as F
+from transformers import (
+    AutoImageProcessor, 
+    AutoModelForDepthEstimation,
+    CLIPProcessor,
+    CLIPModel,
+    CLIPVisionModelWithProjection,
+)
+from ultralytics import YOLO
 from .gpu import clear_gpu_memory
 
 _MODEL_CACHE = {}
@@ -27,6 +33,128 @@ def _get_cached_model(key, loader_func, *args, **kwargs):
 def clear_models_cache():
     clear_gpu_memory(_MODEL_CACHE)
     logger.info("Models cache cleared.")
+
+def load_yolov8(device):
+    '''
+    load_yolov8 的 Docstring
+    
+    :param device: 说明
+    '''
+    def _loader():
+        model = YOLO("yolov8x.pt")
+        return model
+    return _get_cached_model(f"yolov8_{device}", _loader)
+
+def clip_preprocess_tensor(images: torch.Tensor, size=(224, 224)):
+    """
+    CLIP 的标准预处理
+    Args:
+        images: [B, C, H, W] or [C, H, W], value range [0, 1]
+    Returns:
+        [B, C, H, W] normalized tensor
+    """
+    if images.ndim == 3:
+        images = images.unsqueeze(0)
+    
+    # CLIP Mean/Std
+    mean = torch.tensor([0.48145466, 0.4578275, 0.40821073], device=images.device).view(1, 3, 1, 1)
+    std = torch.tensor([0.26862954, 0.26130258, 0.27577711], device=images.device).view(1, 3, 1, 1)
+    
+    # 1. Resize (Bicubic)
+    images = F.interpolate(images, size=size, mode='bicubic', align_corners=False, antialias=True)
+    
+    # 2. Normalize
+    images = (images - mean) / std
+    
+    return images
+
+def get_yolo_detection_results(video_tensor: torch.Tensor, detector: YOLO):
+    """
+    Args:
+        video_tensor: [T, C, H, W] float32 [0, 1] on GPU/CPU
+    Returns:
+        results: List of (bbox_tensor, score_float)
+    """
+    results = []
+    # YOLOv8 支持直接输入 float32 [0-1] 的 BCHW Tensor
+    batch_size = 16 
+    
+    # 确保是 [0, 1]
+    if video_tensor.min() < 0:
+        video_tensor = (video_tensor + 1.0) / 2.0
+    video_tensor = video_tensor.clamp(0, 1)
+
+    for i in range(0, len(video_tensor), batch_size):
+        batch = video_tensor[i : i + batch_size]
+        
+        # YOLO 推理
+        # verbose=False, classes=0 (Person)
+        preds = detector(batch, verbose=False, classes=0)
+        
+        for r in preds:
+            if len(r.boxes) > 0:
+                # 获取最高置信度的框
+                # Ultralytics 的 boxes.xyxy 已经是 Tensor
+                # 默认在 r.boxes.data 所在的 device
+                box = r.boxes[0].xyxy[0] # [x1, y1, x2, y2]
+                conf = r.boxes[0].conf[0].item()
+                results.append((box, conf))
+            else:
+                results.append(None)
+                
+    return results
+
+def get_yolo_detection_results(
+    video_tensor: torch.Tensor, 
+    detector: YOLO
+):
+    """
+    使用 YOLO 对视频进行批量检测。
+    
+    Args:
+        video_tensor: [T, C, H, W] 归一化后的 Tensor
+        detector: 加载好的 YOLO 模型
+        
+    Returns:
+        results: 长度为 T 的列表。
+                 每项为 (bbox, score) 或 None。
+                 bbox 为 [x1, y1, x2, y2] (CPU Tensor)
+    """
+    results = []
+    # YOLO 推理非常快，可以使用较大的 batch_size
+    batch_size = 16 
+    
+    # 1. 数据转换: Tensor -> List[numpy array]
+    # 假设输入在 [-1, 1] 或 [0, 1]
+    if video_tensor.min() < 0:
+        video_tensor = (video_tensor + 1.0) / 2.0
+    video_tensor = video_tensor.clamp(0, 1)
+    
+    # [T, C, H, W] -> [T, H, W, C] -> uint8 numpy
+    imgs_np = video_tensor.permute(0, 2, 3, 1).mul(255).byte().cpu().numpy()
+    
+    # Ultralytics 支持直接传入 List[np.ndarray]
+    imgs_list = [img for img in imgs_np]
+
+    # 2. 批量推理
+    # stream=True 节省内存; classes=0 仅检测“人”
+    # verbose=False 关闭刷屏日志
+    for i in range(0, len(imgs_list), batch_size):
+        batch = imgs_list[i : i + batch_size]
+        preds = detector(batch, verbose=False, classes=0)
+        
+        for r in preds:
+            # 检查是否检测到人
+            if len(r.boxes) > 0:
+                # 默认取置信度最高的一个
+                # boxes 默认按 conf 排序，取第一个即可
+                box = r.boxes[0].xyxy[0].cpu() # [x1, y1, x2, y2]
+                conf = r.boxes[0].conf[0].item()
+                results.append((box, conf))
+            else:
+                results.append(None)
+                
+    return results
 
 def load_dinov2(device):
     def _loader():
@@ -48,7 +176,6 @@ def load_raft(device):
     return _get_cached_model(f"raft_{device}", _loader)
 
 def load_faster_rcnn(device):
-    """专门为 CCE, VV, AC, BSC 提供统一的检测模型"""
     def _loader():
         model = fasterrcnn_resnet50_fpn(weights=FasterRCNN_ResNet50_FPN_Weights.DEFAULT).to(device)
         model.eval()

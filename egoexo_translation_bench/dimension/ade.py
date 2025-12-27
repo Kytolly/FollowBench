@@ -5,7 +5,7 @@ logger = logging.getLogger(__name__)
 from torch import Tensor
 from torchvision.models.detection import fasterrcnn_resnet50_fpn, FasterRCNN_ResNet50_FPN_Weights
 
-from . import DimensionEvaluator
+from ..dimension import DimensionEvaluator
 from .metric import AverageDisplacementError
 from ..utils.pretrain import get_detection_results, load_faster_rcnn
 
