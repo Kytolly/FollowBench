@@ -17,7 +17,7 @@ from transformers import (
     AutoModelForDepthEstimation,
     CLIPProcessor,
     CLIPModel,
-    CLIPVisionModelWithProjection,
+    VideoMAEModel
 )
 from ultralytics import YOLO
 from .gpu import clear_gpu_memory
@@ -34,6 +34,102 @@ def clear_models_cache():
     clear_gpu_memory(_MODEL_CACHE)
     logger.info("Models cache cleared.")
 
+
+def load_videomae_model(device):
+    """
+    加载 VideoMAE 模型用于提取时空特征 (SCCR指标)。
+    使用 'MCG-NJU/videomae-base' (或 large)。
+    """
+    def _loader():
+        model = VideoMAEModel.from_pretrained("MCG-NJU/videomae-base").to(device).eval()
+        return model
+    return _get_cached_model(f"videomae_base_{device}", _loader)
+
+def preprocess_videomae_tensor(video_tensor: torch.Tensor, num_frames=16, target_size=(224, 224)):
+    """
+    VideoMAE 专用预处理 (纯 Tensor)。
+    VideoMAE 需要 [B, T, C, H, W]，通常 T=16。
+    
+    Args:
+        video_tensor: [T_in, C, H, W] in [0, 1]
+    Returns:
+        input_tensor: [1, 16, 3, 224, 224] normalized
+    """
+    T_in, C, H, W = video_tensor.shape
+    
+    # 1. 时序采样 (Uniform Sampling) -> 16帧
+    if T_in == num_frames:
+        indices = torch.arange(T_in, device=video_tensor.device)
+    else:
+        # linspace 采样
+        indices = torch.linspace(0, T_in - 1, num_frames, device=video_tensor.device).long()
+    
+    video_sampled = video_tensor[indices] # [16, C, H, W]
+    
+    # 2. 空间 Resize & CenterCrop (到 224x224)
+    # 简单策略：直接 Resize 到目标尺寸 (或先 Resize 到 256 再 Crop，这里直接 Resize 效率更高)
+    video_resized = torch.nn.functional.interpolate(
+        video_sampled, 
+        size=target_size, 
+        mode='bicubic', 
+        align_corners=False, 
+        antialias=True
+    )
+    
+    # 3. Normalize (ImageNet Mean/Std)
+    mean = torch.tensor([0.485, 0.456, 0.406], device=video_tensor.device).view(1, 3, 1, 1)
+    std = torch.tensor([0.229, 0.224, 0.225], device=video_tensor.device).view(1, 3, 1, 1)
+    
+    video_norm = (video_resized - mean) / std
+    
+    # 4. 增加 Batch 维度: [1, T, C, H, W]
+    return video_norm.unsqueeze(0)
+
+def extract_videomae_features(video_tensor: torch.Tensor, model: VideoMAEModel):
+    """
+    模仿 extract_i3d_features 的风格，针对 VideoMAE 的纯 Tensor 特征提取。
+    
+    Args:
+        video_tensor: [T, C, H, W] in [0, 1]
+        model: VideoMAEModel
+    Returns:
+        feature: [768] tensor (CPU or GPU based on config, recommend CPU for caching)
+    """
+    device = video_tensor.device
+    T, C, H, W = video_tensor.shape
+    
+    # 1. 时序采样 (VideoMAE 需要固定的帧数，通常是 16)
+    num_frames = 16
+    if T == num_frames:
+        indices = torch.arange(T, device=device)
+    else:
+        indices = torch.linspace(0, T - 1, num_frames, device=device).long()
+    
+    video = video_tensor[indices] # [16, C, H, W]
+    
+    # 2. 空间预处理 (Resize 224x224 + Normalize)
+    # VideoMAE 使用 ImageNet Mean/Std
+    mean = torch.tensor([0.485, 0.456, 0.406], device=device).view(1, 3, 1, 1)
+    std = torch.tensor([0.229, 0.224, 0.225], device=device).view(1, 3, 1, 1)
+    
+    # Resize
+    video = F.interpolate(video, size=(224, 224), mode='bicubic', align_corners=False, antialias=True)
+    
+    # Normalize
+    video = (video - mean) / std
+    
+    # [16, 3, 224, 224] -> [1, 16, 3, 224, 224] (Batch dimension)
+    inputs = video.unsqueeze(0)
+    
+    # 3. 推理
+    with torch.no_grad():
+        outputs = model(pixel_values=inputs)
+        # last_hidden_state: [1, 1568, 768] (patches + cls)
+        # Mean Pooling over tokens to get video representation
+        feat = outputs.last_hidden_state.mean(dim=1).squeeze(0) # [768]
+        
+    return feat
+    
 def load_yolov8(device):
     '''
     load_yolov8 的 Docstring

@@ -1,6 +1,8 @@
 from typing import Any
+import numpy as np
 import logging
 logger = logging.getLogger(__name__)
+
 
 from ..dimension import DimensionEvaluator
 from ..utils.pretrain import load_i3d
@@ -9,57 +11,67 @@ from .metric import FrechetVideoDistance
 
 
 class FrechetVideoDistanceEvaluator(DimensionEvaluator):
-    """Evaluator that computes Frechet Video Distance (FVD) between two videos.
-
-    The evaluator uses a pretrained I3D model to extract per-video features and
-    computes FVD on the resulting activations. Features are cached in
-    `global_cache` if provided to avoid redundant computation.
+    """
+    FVD Evaluator (Refactored for Global Calculation).
     """
 
-    def prepare(self):  # noqa: ANN201, ANN101
-        """Load the I3D model onto the evaluator device and call superclass prepare.
-
-        Notes:
-            - Model is obtained via `load_i3d(self.device)`.
-        """
+    def prepare(self):
         self.model = load_i3d(self.device)
         super().prepare()
 
-    def compute(self, **kwargs: Any):  # noqa: ANN201, ANN101
-        """Compute FVD between generated and ground-truth videos.
-
-        Args:
-            **kwargs: Keyword arguments forwarded from the evaluation pipeline.
-                Expected keys:
-                    - 'tensor_gen': frames generator for generated video.
-                    - 'tensor_gt': frames generator for ground-truth video.
-                    - 'video_id': identifier for the current video.
-                    - 'global_cache': optional dict-like cache for intermediate results.
-
-        Returns:
-            A scalar FVD score (float) computed from extracted features.
+    def compute(self, **kwargs: Any):
+        """
+        提取特征并收集到 global_cache，不返回单项分数。
         """
         video_gen = kwargs.get('tensor_gen')
         video_gt = kwargs.get('tensor_gt')
         video_id = kwargs.get('video_id')
         global_cache = kwargs.get('global_cache')
 
+        if video_gen is None or video_gt is None or global_cache is None:
+            return 0.0
+
+        # 1. 提取生成视频特征
         gen_key = f"i3d_feat_gen_{video_id}"
-        if global_cache is not None and gen_key in global_cache:
-            # cache hits
+        if gen_key in global_cache:
             feat_gen = global_cache[gen_key]
-        else:  # cache not hits
+        else:
             feat_gen = extract_i3d_features(video_gen, self.model)
-            if global_cache is not None:
-                global_cache[gen_key] = feat_gen
+            global_cache[gen_key] = feat_gen
 
+        # 2. 提取真值视频特征
         gt_key = f"i3d_feat_gt_{video_id}"
-        if global_cache is not None and gt_key in global_cache:
-            # cache hits
+        if gt_key in global_cache:
             feat_gt = global_cache[gt_key]
-        else:  # cache not hits
+        else:
             feat_gt = extract_i3d_features(video_gt, self.model)
-            if global_cache is not None:
-                global_cache[gt_key] = feat_gt
+            global_cache[gt_key] = feat_gt
 
-        return float(FrechetVideoDistance(feat_gen, feat_gt))
+        # 3. 收集到列表 (Accumulate)
+        # 存入 CPU numpy array 以节省显存
+        global_cache.setdefault('fvd_gen_list', []).append(feat_gen)
+        global_cache.setdefault('fvd_gt_list', []).append(feat_gt)
+
+        return 0.0
+
+    @staticmethod
+    def finalize_metric(global_cache: dict):
+        """
+        在所有视频遍历结束后调用，计算 Dataset-level FVD。
+        """
+        gen_list = global_cache.get('fvd_gen_list', [])
+        gt_list = global_cache.get('fvd_gt_list', [])
+
+        if not gen_list or not gt_list:
+            logger.warning("No features collected for FVD.")
+            return 0.0
+
+        logger.info(f"Finalizing FVD with {len(gen_list)} samples...")
+        
+        # 堆叠特征 [N, D]
+        feats_gen = np.stack(gen_list, axis=0)
+        feats_gt = np.stack(gt_list, axis=0)
+        
+        # 计算
+        score = FrechetVideoDistance(feats_gen, feats_gt)
+        return float(score)

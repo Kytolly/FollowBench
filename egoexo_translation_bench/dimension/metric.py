@@ -584,6 +584,54 @@ def SideBySideDepthConsistency(
     return rmse.item()
 
 
+def SourceControlConditionRecall(
+    gen_feats: torch.Tensor, 
+    gt_feats: torch.Tensor, 
+    top_k: tuple = (1, 5)
+):
+    """
+    SCCR 核心计算：基于检索的后验验证。
+    
+    Args:
+        gen_feats: [N, D] 生成视频特征矩阵 (Query)
+        gt_feats:  [N, D] 真值视频特征矩阵 (Gallery/Distractors)
+    """
+    N = gen_feats.shape[0]
+    if N == 0:
+        return {f'SCCR@{k}': 0.0 for k in top_k}
+    
+    # 1. 归一化 (L2 Norm)
+    gen_norm = torch.nn.functional.normalize(gen_feats, p=2, dim=-1)
+    gt_norm = torch.nn.functional.normalize(gt_feats, p=2, dim=-1)
+    
+    # 2. 计算相似度矩阵 S [N, N]
+    # S[i, j] = Gen[i] 与 GT[j] 的相似度
+    sim_matrix = torch.mm(gen_norm, gt_norm.transpose(0, 1))
+    
+    # 3. 排序 (Ranking)
+    # 对每一行降序排列，看 GT 对应的索引排在哪里
+    # 理想情况：S[i, i] 应该是该行的最大值
+    _, sorted_indices = torch.sort(sim_matrix, dim=1, descending=True)
+    
+    # 4. 找到 Ground Truth 所在的 Rank
+    # 每一行的目标索引就是行号本身 (0, 1, ..., N-1)
+    targets = torch.arange(N, device=sim_matrix.device).view(N, 1)
+    
+    # rank (0-based)
+    rank_matrix = (sorted_indices == targets).nonzero(as_tuple=True)[1]
+    
+    # 转为 1-based rank 以便计算 @K
+    ranks = rank_matrix + 1
+    
+    # 5. 计算 Recall@K
+    results = {}
+    for k in top_k:
+        acc = (ranks <= k).float().mean().item()
+        results[f'SCCR@{k}'] = acc
+        
+    return results
+
+
 def SubjectCameraDistanceError(
     depth_gen: torch.Tensor, 
     depth_gt: torch.Tensor,

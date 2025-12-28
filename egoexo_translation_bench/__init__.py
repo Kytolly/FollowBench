@@ -4,10 +4,14 @@ This module provides the core Bench class that orchestrates the evaluation
 pipeline for ego-to-exocentric video translation models.
 """
 
-import logging
 from pathlib import Path
-from typing import List, Optional, Dict, Any, Union
+from typing import Union
+from tqdm import tqdm
+import logging
+logger = logging.getLogger()
+
 import torch
+from torchvision.transforms.functional import to_pil_image
 
 from .dimension import BenchRouter, DIMENSION_NAMES
 from .record.recoder import Recorder
@@ -42,89 +46,147 @@ class Bench:
         """
         self.device = device
         self.assets_root = Path(assets_root)
-        self.router = BenchRouter(device, assets_root)
-
-    def evaluate(self, 
-                 submission: Submission, 
-                 output_dir: Union[str, Path] = 'output/',
-                 metrics_list: Optional[List[str]] = None,
-                 batch_size: int = 1,
-                 num_workers: int = 4,
-                 *args: Any,
-                 **kwargs: Any) -> None:
-        """Run complete evaluation pipeline on a submission.
+        self.router = BenchRouter(device, self.assets_root)
         
-        This method processes the submission through all evaluation metrics,
-        computes scores, and generates a comprehensive evaluation report.
+        # Configure logging
+        logging.basicConfig(level=logging.INFO)
+        self.logger = logging.getLogger("EgoExoBench")
+
+    def run(self, opt: Options, submission: Submission):
+        """Execute the benchmark evaluation pipeline.
+        
+        Optimized flow:
+        1. Initialize all Evaluators.
+        2. Iterate through the DataLoader ONCE.
+        3. For each batch, compute ALL per-case metrics (sharing detection/flow cache).
+        4. After the loop, finalize ALL global metrics (FVD, SCCR).
         
         Args:
-            submission: Submission object containing model results
-            output_dir: Directory to save evaluation results
-            metrics_list: List of metric names to compute. If None, computes all metrics
-            batch_size: Batch size for data loading
-            num_workers: Number of worker processes for data loading
-            *args: Additional positional arguments
-            **kwargs: Additional keyword arguments including:
-                - annotation_path: Custom path to annotation file
-                
-        Raises:
-            Exception: If DataLoader creation fails or evaluation encounters errors
+            opt: Configuration options for the evaluation
+            submission: Submission object containing generated videos
         """
-        if metrics_list is None:
-            metrics_list = DIMENSION_NAMES
+        output_dir = Path(opt.output_dir)
+        output_dir.mkdir(parents=True, exist_ok=True)
         
-        # Prepare dataflow options from submission metadata
-        meta = submission.meta_info
-        anno_path = kwargs.get('annotation_path', self.assets_root / 'test/annotation.json')
-        
-        opt = Options(
-            assets=str(self.assets_root),
-            phase='test',  # Force test mode for evaluation
-            modal=meta.get('modal', 'vace_instruct'),
-            mode=meta.get('mode', 'easy'),
-            batch_size=batch_size,
-            num_workers=num_workers,
-            height=CONFIG['rules']['resolution_height'],
-            width=CONFIG['rules']['resolution_width'],
-            clip_len=300   # Default frame count
-        )
-        
-        # Initialize DataLoader
-        # This automatically loads GT and Ego videos without manual path passing
+        # 1. Prepare DataLoader
         try:
             loader_wrapper = BenchmarkDataLoader(opt)
             dataloader = loader_wrapper.dataloader
+            meta = loader_wrapper.dataset.metadata
         except Exception as e:
-            logging.error(f"Failed to create DataLoader: {e}")
+            self.logger.error(f"Failed to create DataLoader: {e}")
             raise e
 
-        # Initialize result recorder
+        # 2. Initialize Recorder
         recorder = Recorder(meta, output_dir)
         
-        # Execute evaluation loop
-        logging.info("Starting Evaluation Pipeline...")
-        for metric in metrics_list:
-            logging.info(f"--- Computing {metric} ---")
-            
-            # Compute metric using router
-            scores = self.router.compute_metric_with_loader(
-                metric_name=metric, 
-                submission=submission, 
-                dataloader=dataloader
-            )
-            
-            # Record results (BenchRouter returns {vid: score} or float)
-            # Recorder.update expects (vid, dict), so we need to adapt
-            if isinstance(scores, dict):
-                # Case-level metrics
-                for vid, score in scores.items():
-                    recorder.update(vid, {metric: score})
-            else:
-                # Dataset-level metrics (e.g., FVD)
-                # Record under a virtual ID for dataset-level metrics
-                # TODO: Consider adding add_global_metric interface to Recorder
-                recorder.update("Dataset_Global", {metric: scores})
+        # 3. Prepare Evaluators
+        metrics_list = opt.metrics
+        active_evaluators = {}
+        
+        self.logger.info("Preparing evaluators...")
+        for metric_name in metrics_list:
+            try:
+                evaluator = self.router.get_evaluator(metric_name)
+                evaluator.prepare()
+                active_evaluators[metric_name] = evaluator
+            except Exception as e:
+                self.logger.error(f"Failed to initialize evaluator for {metric_name}: {e}")
 
-        # Save evaluation report
+        # 4. Main Evaluation Loop (One Pass)
+        self.logger.info(f"Starting Evaluation on {len(dataloader)} batches...")
+        
+        # Clear router cache before starting
+        self.router.global_cache.clear()
+
+        for batch in tqdm(dataloader, desc="Evaluating"):
+            # Move data to device
+            ego_videos = batch.get('ego_video')
+            gt_videos = batch.get('exo_video')
+            ref_images = batch.get('ref_image')
+            
+            if ego_videos is not None: ego_videos = ego_videos.to(self.device)
+            if gt_videos is not None: gt_videos = gt_videos.to(self.device)
+            
+            ids = batch['video_id']
+
+            for i, vid_id in enumerate(ids):
+                # Retrieve Generated Video
+                gen_video = submission.get_generated_video(vid_id)
+                if gen_video is None:
+                    self.logger.warning(f"Missing generation for {vid_id}, skipping.")
+                    continue
+                
+                tensor_gen = gen_video.to(self.device)
+                tensor_gt = gt_videos[i] if gt_videos is not None else None
+                tensor_ego = ego_videos[i] if ego_videos is not None else None
+                
+                # Handle Reference Image (Normalize -> PIL)
+                pillow_ref = None
+                if ref_images is not None:
+                    # Assuming dataset normalized to [-1, 1], convert to [0, 1] then PIL
+                    ref_tensor = ref_images[i].clone() * 0.5 + 0.5
+                    ref_tensor = torch.clamp(ref_tensor, 0, 1)
+                    pillow_ref = to_pil_image(ref_tensor)
+
+                # Shared Context for this video
+                # global_cache is shared across metrics for this video to reuse detections/flows
+                compute_kwargs = {
+                    'tensor_gen': tensor_gen,
+                    'tensor_gt': tensor_gt,
+                    'tensor_ego': tensor_ego,
+                    'pillow_ref': pillow_ref,
+                    'video_id': vid_id,
+                    'global_cache': self.router.global_cache
+                }
+
+                # Compute ALL metrics for this video
+                for name, evaluator in active_evaluators.items():
+                    try:
+                        score = evaluator.compute(**compute_kwargs)
+                        
+                        # Only record score if it's a Case-level metric
+                        # (Dataset-level metrics like FVD return dummy 0.0 and cache features)
+                        if not hasattr(evaluator, 'finalize_metric'):
+                            recorder.update(vid_id, {name: score})
+                            
+                    except Exception as e:
+                        self.logger.error(f"Error computing {name} for {vid_id}: {e}")
+
+                # [Optimization] Immediate Cleanup for Per-Video Cache
+                # Clear detection/flow results specific to this video ID to save VRAM.
+                # Do NOT clear list-based accumulators (used by FVD/SCCR).
+                keys_to_remove = [
+                    k for k in self.router.global_cache.keys() 
+                    if str(vid_id) in k and 'list' not in k
+                ]
+                for k in keys_to_remove:
+                    del self.router.global_cache[k]
+                
+                # Release Gen Tensor
+                del tensor_gen
+
+        # 5. Finalize Global Metrics (FVD, SCCR)
+        self.logger.info("Finalizing global metrics...")
+        for name, evaluator in active_evaluators.items():
+            if hasattr(evaluator, 'finalize_metric'):
+                try:
+                    # Use router helper to calculate final score from accumulated cache
+                    global_score = self.router.calculate_global_metric(name, self.router.global_cache)
+                    
+                    # Support both dict (SCCR) and float (FVD) returns
+                    if isinstance(global_score, dict):
+                        recorder.update("Dataset_Global", global_score)
+                    else:
+                        recorder.update("Dataset_Global", {name: global_score})
+                        
+                except Exception as e:
+                    self.logger.error(f"Error finalizing {name}: {e}")
+            
+            # Cleanup evaluator resources
+            evaluator.clear()
+
+        # 6. Save Report
         recorder.save_report()
-        logging.info(f"Evaluation complete. Results saved to {output_dir}")
+        self.router.global_cache.clear()
+        self.logger.info(f"Evaluation complete. Results saved to {output_dir}")
