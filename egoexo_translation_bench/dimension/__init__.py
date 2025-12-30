@@ -25,21 +25,26 @@ from ..dataflow.set import BenchmarkDataset
 from ..dataflow.submission import Submission
 
 DIMENSION_NAMES = [
-    'FrechetVideoDistance', 'SourceControlConditionRecall', # [新增] SCCR
+    'FrechetVideoDistance', 'SourceControlConditionRecall',
     'AestheticQuality', 'ImagingQuality', 
     'TemporalFlickering', 'MotionSmoothness', 'DynamicDegree', 
     'CameraCenteringError', 'AppearanceConsistency', 'ViewpointValidity', 
-    'BackgroundSemanticConsistency', 'HumanActionAlignment', 
-    'OpticalFlowCorrelation', 'TrajectoryAlignment'
+    # 'BackgroundSemanticConsistency', 
+    'HumanActionAlignment', 
+    'OpticalFlowCorrelation', 'TrajectoryAlignment',
+    'SideBySideDepthConsistency', 'StructuralFidelity', 
+    'SubjectCameraDistanceError'
 ]
 
 DIMENSION_NAMES_IN_SHORT = [
-    'fvd', 'sccr', # [新增] sccr
+    'fvd', 'sccr',
     'aq', 'iq',
     'tf', 'ms', 'dd',
     'cce', 'ac', 'vv',
-    'bsc', 'haa',
-    'ofc', 'ta'
+    # 'bsc', 
+    'haa',
+    'ofc', 'ta',
+    'ssdc', 'sf', 'scde'
 ]
 DIMENSION_MODULE_MAP = dict(zip(DIMENSION_NAMES, DIMENSION_NAMES_IN_SHORT))
 SHORT_TO_FULL_MAP = {v: k for k, v in DIMENSION_MODULE_MAP.items()}

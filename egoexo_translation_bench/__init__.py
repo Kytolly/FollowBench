@@ -37,7 +37,7 @@ class Bench:
         router: BenchRouter instance for metric computation
     """
     
-    def __init__(self, device: str, assets_root: Union[str, Path] = 'assets/') -> None:
+    def __init__(self, device: str, assets_root: Union[str, Path] = 'assets/'):
         """Initialize the benchmark engine.
         
         Args:

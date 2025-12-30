@@ -129,7 +129,59 @@ def extract_videomae_features(video_tensor: torch.Tensor, model: VideoMAEModel):
         feat = outputs.last_hidden_state.mean(dim=1).squeeze(0) # [768]
         
     return feat
+
+def extract_videomae_sequence(video_tensor: torch.Tensor, model: VideoMAEModel):
+    """
+    提取视频的时序特征序列 (Sequence of Features).
     
+    Args:
+        video_tensor: [T_in, C, H, W] 原始视频张量
+        model: VideoMAEModel
+    
+    Returns:
+        seq_feats: [T_out, D]  (T_out通常为8, D为768)
+        代表视频在 8 个时间步上的语义特征。
+    """
+    device = video_tensor.device
+    T_in, C, H, W = video_tensor.shape
+    
+    # 1. 采样 16 帧 (VideoMAE 标准输入)
+    num_frames = 16
+    if T_in == num_frames:
+        indices = torch.arange(T_in, device=device)
+    else:
+        indices = torch.linspace(0, T_in - 1, num_frames, device=device).long()
+    
+    video = video_tensor[indices] # [16, C, H, W]
+    
+    # 2. 预处理 (Resize 224x224 + Normalize)
+    mean = torch.tensor([0.485, 0.456, 0.406], device=device).view(1, 3, 1, 1)
+    std = torch.tensor([0.229, 0.224, 0.225], device=device).view(1, 3, 1, 1)
+    
+    video = F.interpolate(video, size=(224, 224), mode='bicubic', align_corners=False, antialias=True)
+    video = (video - mean) / std
+    
+    # Add Batch Dim: [1, 16, 3, 224, 224]
+    inputs = video.unsqueeze(0)
+    
+    # 3. 推理
+    with torch.no_grad():
+        outputs = model(pixel_values=inputs)
+        # last_hidden_state: [1, 1568, 768]
+        # Token Layout: (Time // 2) * (H // 16) * (W // 16)
+        # 对于 16x224x224 -> Time=8, H=14, W=14 -> 8*14*14 = 1568
+        tokens = outputs.last_hidden_state.squeeze(0) # [1568, 768]
+        
+        # 4. 还原时空结构并池化
+        # Reshape to [T', H', W', D]
+        # VideoMAE tokens 顺序通常是 T 优先
+        tokens = tokens.view(8, 14, 14, 768)
+        
+        # Spatial Mean Pooling: [8, 14, 14, 768] -> [8, 768]
+        seq_feats = tokens.mean(dim=(1, 2))
+        
+    return seq_feats
+   
 def load_yolov8(device):
     '''
     load_yolov8 的 Docstring

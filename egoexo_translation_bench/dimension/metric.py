@@ -739,6 +739,44 @@ def StructuralFidelity(
     return sum(scores) / len(scores) if scores else 0.0
 
 
+def TemporalAttentionAlignment(
+    gen_seq: torch.Tensor, 
+    gt_seq: torch.Tensor, 
+    temperature: float = None
+) -> float:
+    """
+    计算 TAA (Temporal Attention Alignment) 指标。
+    
+    Args:
+        gen_seq: [T, D] 生成视频的时序特征序列 (Query)
+        gt_seq:  [T, D] 真值视频的时序特征序列 (Key)
+        temperature:用于调节 Attention 锐度的系数，默认 sqrt(D)
+        
+    Returns:
+        float: 对角线迹的均值 (Trace Mean), 范围 [0, 1]
+    """
+    T, D = gen_seq.shape
+    if temperature is None:
+        temperature = D ** 0.5
+        
+    # 1. 计算 QK^T (Logits) -> [T, T]
+    # 行(Row)代表 Gen 的时间步，列(Col)代表 GT 的时间步
+    scores = torch.matmul(gen_seq, gt_seq.transpose(0, 1)) / temperature
+    
+    # 2. Softmax (Row-wise)
+    # 归一化每一行，看生成视频的第 t 秒主要关注 GT 的哪一秒
+    attn_map = torch.softmax(scores, dim=-1) # [T, T]
+    
+    # 3. 计算对角线 Trace
+    # diag() 提取对角线元素 [A_11, A_22, ..., A_TT]
+    trace = torch.trace(attn_map)
+    
+    # 4. 均值化
+    taa_score = trace / T
+    
+    return float(taa_score.item())
+
+
 def TemporalFlickering(gen_frames: Tensor, gen_flows: Tensor, device):  # noqa: ANN201
     """Measure temporal flickering using warping consistency with optical flow.
 
