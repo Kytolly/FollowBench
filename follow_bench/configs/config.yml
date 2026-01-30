@@ -5,6 +5,7 @@ test:
   path_assets: "assets/"
   models:
     wham_vit_h: "third-party/WHAM/checkpoints/wham_vit_bedlam_w_3dpw.pth.tar"
+    yolo: "models/yolov8x.pt"
   rules:
     clip_len: 300
     fps: 60

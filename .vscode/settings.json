@@ -1,9 +1,5 @@
 {
     "python.analysis.extraPaths": [
-        "D:\\Desktop\\xqy\\NUS311\\FYP\\library\\Wan2.1"
-    ],
-    "python.defaultInterpreterPath": "D:\\Anaconda\\envs\\fyp\\python.exe",
-    "cursorpyright.analysis.extraPaths": [
-        "D:\\Desktop\\xqy\\NUS311\\FYP\\library\\Wan2.1"
+        "/opt/liblibai-models/user-workspace2/users/xqy/library"
     ]
 }

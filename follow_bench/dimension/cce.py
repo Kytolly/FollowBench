@@ -13,6 +13,7 @@ from ..utils.pretrain import (
     get_yolo_detection_results, 
     load_yolov8
 )
+from ..configs import CONFIG
 
 class CameraCenteringErrorEvaluator(DimensionEvaluator):
     """Evaluator for Camera Centering Error (CCE).
@@ -23,7 +24,8 @@ class CameraCenteringErrorEvaluator(DimensionEvaluator):
 
     def prepare(self):  # noqa: ANN201, ANN101
         """Load the detector and call base prepare."""
-        self.model = load_yolov8(self.device)
+        model_path = CONFIG.models.yolo
+        self.model = load_yolov8(self.device, model_path=model_path)
         super().prepare()
 
     def compute(self, **kwargs: Any):  # noqa: ANN201, ANN101

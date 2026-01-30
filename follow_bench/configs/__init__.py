@@ -28,7 +28,8 @@ globals()["CONFIG_DIR"] = str(_CONFIGS_DIR)
 # -----------------------------------------------------------------------------
 @dataclass
 class ModelsConfig:
-    wham_vit_h: int = "assets/models/wham_vit_h.pth"
+    wham_vit_h: str = "models/wham_vit_h.pth"
+    yolo: str = "models/yolov8x.pt"
     
 @dataclass
 class RulesConfig:

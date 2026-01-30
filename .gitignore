@@ -216,3 +216,5 @@ configs/config.yml
 !.env.example 
 .VSCodeCounter/
 third-party/
+models/
+.vscode/

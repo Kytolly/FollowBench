@@ -5,6 +5,7 @@ logger = logging.getLogger(__name__)
 
 import torch
 from torchvision import transforms
+from torchvision.transforms import functional as TF
 from torchvision.models.detection import (
     keypointrcnn_resnet50_fpn, KeypointRCNN_ResNet50_FPN_Weights,
     fasterrcnn_resnet50_fpn, FasterRCNN_ResNet50_FPN_Weights
@@ -182,73 +183,128 @@ def extract_videomae_sequence(video_tensor: torch.Tensor, model: VideoMAEModel):
         
     return seq_feats
    
-def load_yolov8(device):
+def load_yolov8(device, model_path="yolov8x.pt"):
     '''
     load_yolov8 的 Docstring
     
     :param device: 说明
     '''
     def _loader():
-        model = YOLO("yolov8x.pt")
+        model = YOLO(model_path)
         return model
     return _get_cached_model(f"yolov8_{device}", _loader)
 
 def clip_preprocess_tensor(images: torch.Tensor, size=(224, 224)):
     """
-    CLIP 的标准预处理
-    Args:
-        images: [B, C, H, W] or [C, H, W], value range [0, 1]
-    Returns:
-        [B, C, H, W] normalized tensor
+    CLIP 的全 GPU 预处理 (仅 Normalize)。
+    假设输入已经是 224x224 的 Tensor。
     """
     if images.ndim == 3:
         images = images.unsqueeze(0)
     
-    # CLIP Mean/Std
+    # 安全检查：如果尺寸不对才 Resize (通常不会触发)
+    if images.shape[-2:] != size:
+        # 如果必须 resize，这里用 squash 兜底，但 ac.py 应该已经保证了尺寸
+        images = F.interpolate(images, size=size, mode='bicubic', align_corners=False, antialias=True)
+    
+    # Normalize (CLIP Mean/Std)
     mean = torch.tensor([0.48145466, 0.4578275, 0.40821073], device=images.device).view(1, 3, 1, 1)
     std = torch.tensor([0.26862954, 0.26130258, 0.27577711], device=images.device).view(1, 3, 1, 1)
-    
-    # 1. Resize (Bicubic)
-    images = F.interpolate(images, size=size, mode='bicubic', align_corners=False, antialias=True)
-    
-    # 2. Normalize
-    images = (images - mean) / std
-    
-    return images
+    return (images - mean) / std
 
-def get_yolo_detection_results(video_tensor: torch.Tensor, detector: YOLO):
+def get_crop_embedding(
+    image_tensor: torch.Tensor, 
+    bbox: torch.Tensor, 
+    model: CLIPModel, 
+    processor: CLIPProcessor, 
+    device: str
+):
     """
+    工具函数：裁剪图像区域并提取 CLIP 特征。
+    
     Args:
-        video_tensor: [T, C, H, W] float32 [0, 1] on GPU/CPU
+        image_tensor: [C, H, W] 单帧图像
+        bbox: [x1, y1, x2, y2]
+        model: CLIPModel
+        processor: CLIPProcessor
+        device: 计算设备
+        
     Returns:
-        results: List of (bbox_tensor, score_float)
+        normalized_embedding: [1, D] Tensor (on device) 或 None (若裁剪无效)
+    """
+    if bbox is None:
+        return None
+        
+    x1, y1, x2, y2 = map(int, bbox.tolist())
+    H, W = image_tensor.shape[1], image_tensor.shape[2]
+    
+    # 边界保护
+    x1, y1 = max(0, x1), max(0, y1)
+    x2, y2 = min(W, x2), min(H, y2)
+    
+    if x2 <= x1 or y2 <= y1:
+        return None
+    
+    # Crop
+    crop = image_tensor[:, y1:y2, x1:x2] # [C, h, w]
+    
+    try:
+        # Preprocess: Tensor -> PIL -> Processor -> Tensor
+        # CLIPProcessor 需要 PIL (或者 List[PIL])
+        pil_img = TF.to_pil_image(crop.cpu())
+        inputs = processor(images=pil_img, return_tensors="pt").to(device)
+        
+        with torch.no_grad():
+            features = model.get_image_features(**inputs) # [1, D]
+            # 立即归一化，方便后续计算 Cosine Similarity
+            return F.normalize(features, p=2, dim=-1)
+    except Exception as e:
+        logger.warning(f"CLIP embedding extraction failed: {e}")
+        return None
+
+def get_all_yolo_detections(video_tensor: torch.Tensor, detector: YOLO):
+    """
+    对视频帧进行检测，返回每一帧中检测到的【所有】人物框。
+    
+    Args:
+        video_tensor: [T, C, H, W] 归一化后的 Tensor (支持 [0,1] 或 [-1,1])
+        detector: YOLO 模型实例
+        
+    Returns:
+        List[List[Tuple[tensor_bbox, float_conf]]]: 
+            外层 List 长度为 T (帧数)。
+            内层 List 包含该帧所有检测结果，每个结果为 (bbox, conf)。
+            bbox 为 [x1, y1, x2, y2] (CPU Tensor)。
     """
     results = []
-    # YOLOv8 支持直接输入 float32 [0-1] 的 BCHW Tensor
     batch_size = 16 
     
-    # 确保是 [0, 1]
+    # 确保是 [0, 1] 用于转 uint8
     if video_tensor.min() < 0:
         video_tensor = (video_tensor + 1.0) / 2.0
     video_tensor = video_tensor.clamp(0, 1)
 
-    for i in range(0, len(video_tensor), batch_size):
-        batch = video_tensor[i : i + batch_size]
-        
-        # YOLO 推理
-        # verbose=False, classes=0 (Person)
+    # Tensor -> List[numpy uint8] (Ultralytics 推理最快的方式)
+    imgs_np = video_tensor.permute(0, 2, 3, 1).mul(255).byte().cpu().numpy()
+    imgs_list = [img for img in imgs_np]
+
+    for i in range(0, len(imgs_list), batch_size):
+        batch = imgs_list[i : i + batch_size]
+        # classes=0 仅检测人
         preds = detector(batch, verbose=False, classes=0)
         
         for r in preds:
+            frame_detections = []
             if len(r.boxes) > 0:
-                # 获取最高置信度的框
-                # Ultralytics 的 boxes.xyxy 已经是 Tensor
-                # 默认在 r.boxes.data 所在的 device
-                box = r.boxes[0].xyxy[0] # [x1, y1, x2, y2]
-                conf = r.boxes[0].conf[0].item()
-                results.append((box, conf))
-            else:
-                results.append(None)
+                # 遍历该帧所有检测框
+                # r.boxes 是一个 Boxes 对象，包含 xyxy, conf, cls
+                boxes = r.boxes.xyxy.cpu()
+                confs = r.boxes.conf.cpu()
+                
+                for k in range(len(boxes)):
+                    frame_detections.append((boxes[k], confs[k].item()))
+            
+            results.append(frame_detections)
                 
     return results
 
@@ -301,7 +357,6 @@ def get_yolo_detection_results(
                 results.append((box, conf))
             else:
                 results.append(None)
-                
     return results
 
 def load_dinov2(device):
