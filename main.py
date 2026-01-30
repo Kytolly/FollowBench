@@ -11,7 +11,7 @@ from pathlib import Path
 current_dir: Path = Path(__file__).parent.absolute()
 sys.path.append(str(current_dir))
 
-from egoexo_translation_bench.cli.core import cli
+from follow_bench.cli.core import cli
 
 
 def main() -> None:

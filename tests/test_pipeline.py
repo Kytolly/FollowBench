@@ -15,11 +15,11 @@ logging.basicConfig(
     force=True
 )
 
-from egoexo_translation_bench.configs import CONFIG # 确保在测试环境
-from egoexo_translation_bench.utils.persistence import *
-from egoexo_translation_bench.dataflow.submission import Submission
-from egoexo_translation_bench import Bench
-from egoexo_translation_bench.dimension import DIMENSION_NAMES
+from follow_bench.configs import CONFIG # 确保在测试环境
+from follow_bench.utils.persistence import *
+from follow_bench.dataflow.submission import Submission
+from follow_bench import Bench
+from follow_bench.dimension import DIMENSION_NAMES
 
 def get_submission():
     # 3. 使用 OmegaConf 的点号访问 (Config Refactor 适配)

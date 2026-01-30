@@ -3,18 +3,18 @@ requires = ["setuptools>=61", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "ego2exo_bench"
+name = "FollowBench"
 version = "0.1.0"
-description = "Ego2Exo Benchmark Engine"
+description = "Follow Bench Engine"
 readme = "README.md"
 requires-python = ">=3.9"
 authors = [
-    { name = "Ego2Exo Team" }
+    { name = "showlab" }
 ]
 dependencies = []
 
 [project.urls]
-Homepage = "https://example.com/ego2exo-benchmark"
+Homepage = "https://github.com/Kytolly/FollowBench"
 
 [tool.setuptools]
 include-package-data = true
