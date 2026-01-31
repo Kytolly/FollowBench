@@ -4,6 +4,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 import torch
+import torch.nn as nn
 from torchvision import transforms
 from torchvision.transforms import functional as TF
 from torchvision.models.detection import (
@@ -21,6 +22,8 @@ from transformers import (
     VideoMAEModel
 )
 from ultralytics import YOLO
+from huggingface_hub import hf_hub_download
+
 from .gpu import clear_gpu_memory
 
 _MODEL_CACHE = {}
@@ -436,14 +439,21 @@ def load_musiq(device):
     return _get_cached_model(f"musiq_{device}", _loader)
     
 def load_laion_aes_vit(device):
+    """
+    通过 pyiqa 加载 LAION-Aesthetics 模型。
+    Correct Key: 'laion_aes'
+    """
     def _loader():
         try:
-            metric = pyiqa.create_metric('laion_aes_pl', device=device)
+            # 使用正确的 key 'laion_aes'
+            logger.info("Initializing PyIQA laion_aes metric...")
+            metric = pyiqa.create_metric('laion_aes', device=device)
             metric.eval()
             return metric
         except Exception as e:
-            logger.info(f"Failed to load LAION-AES: {e}")
+            logger.error(f"Failed to load PyIQA LAION-AES: {e}")
             return None
+            
     return _get_cached_model(f"laion_aes_{device}", _loader)
 
 def load_clip(device):
