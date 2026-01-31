@@ -359,6 +359,30 @@ def get_yolo_detection_results(
                 results.append(None)
     return results
 
+def extract_trajectory_detections(
+    video_tensor: torch.Tensor, 
+    detector: YOLO
+):
+        """
+        提取轨迹专用的检测结果：每帧只选一个主角 (Largest BBox)。
+        """
+        # 获取所有检测框
+        all_detections = get_all_yolo_detections(video_tensor, detector)
+        final_detections = []
+        
+        for candidates in all_detections:
+            if not candidates:
+                final_detections.append(None)
+                continue
+            
+            # 策略：选择面积最大的框作为主角
+            # bbox: [x1, y1, x2, y2]
+            best_candidate = max(candidates, key=lambda x: (x[0][2]-x[0][0]) * (x[0][3]-x[0][1]))
+            
+            # metric.py 的 get_traj 期望 List[Optional[Tuple[box, conf]]]
+            final_detections.append(best_candidate) 
+        return final_detections
+    
 def load_dinov2(device):
     def _loader():
         model = torch.hub.load('facebookresearch/dinov2', 'dinov2_vits14').eval().to(device)

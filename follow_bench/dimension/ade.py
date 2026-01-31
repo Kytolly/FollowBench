@@ -1,52 +1,57 @@
 from typing import Any
 import logging
-logger = logging.getLogger(__name__)
-
-from torch import Tensor
-from torchvision.models.detection import fasterrcnn_resnet50_fpn, FasterRCNN_ResNet50_FPN_Weights
+import torch
 
 from ..dimension import DimensionEvaluator
-from .metric import AverageDisplacementError
-from ..utils.pretrain import get_detection_results, load_faster_rcnn
+from ..dimension.metric import AverageDisplacementError
+from ..utils.pretrain import load_yolov8, extract_trajectory_detections
+from ..configs import CONFIG
+
+logger = logging.getLogger(__name__)
 
 class AverageDisplacementErrorEvaluator(DimensionEvaluator):
-    """Evaluator for trajectory alignment between generated and GT videos."""
-
+    """
+    Average Displacement Error (ADE) Evaluator.
+    Computes the deviation between the generated subject's trajectory and the GT trajectory.
+    """
     def prepare(self):
-        """Load detector and call base prepare."""
-        self.det = load_faster_rcnn(self.device)
+        model_path = CONFIG.models.yolo
+        self.detector = load_yolov8(self.device, model_path=model_path)
         super().prepare()
 
-    def compute(self, **kwargs: Any):
-        """Compute Trajectory Alignment using detection/keypoint results.
-
-        Expected kwargs: 'tensor_gen', 'tensor_gt', 'video_id', 'global_cache'.
-        Returns the mean normalized trajectory alignment error (float).
-        """
+    def compute(self, **kwargs: Any) -> float:
         video_gen = kwargs.get('tensor_gen')
         video_gt = kwargs.get('tensor_gt')
         video_id = kwargs.get('video_id')
         global_cache = kwargs.get('global_cache')
         
-        # 1. Gen Detection (Shared Cache)
-        gen_key = f"detection_gen_{video_id}"
-        if global_cache is not None and gen_key in global_cache:
-            det_gen = global_cache[gen_key]
-        else:
-            det_gen = get_detection_results(video_gen, self.det)
-            if global_cache is not None: global_cache[gen_key] = det_gen
-            
-        # 2. GT Detection (Shared Cache)
-        gt_key = f"detection_gt_{video_id}"
-        if global_cache is not None and gt_key in global_cache:
-            det_gt = global_cache[gt_key]
-        else:
-            det_gt = get_detection_results(video_gt, self.det)
-            if global_cache is not None: global_cache[gt_key] = det_gt
+        if video_gen is None or video_gt is None:
+            return 1.0 # 无法计算时给最大误差
 
         H, W = video_gen.shape[2], video_gen.shape[3]
-        return float(AverageDisplacementError(det_gen, det_gt, H, W))
-    
+
+        # 1. 获取生成视频检测结果 (带缓存)
+        # 注意：这里缓存 Key 用 _traj_ 区分，因为这是筛选过的单人结果
+        cache_key_gen = f"detection_traj_gen_{video_id}"
+        if global_cache is not None and cache_key_gen in global_cache:
+            gen_results = global_cache[cache_key_gen]
+        else:
+            gen_results = extract_trajectory_detections(video_gen, self.detector)
+            if global_cache is not None: global_cache[cache_key_gen] = gen_results
+            
+        # 2. 获取 GT 视频检测结果 (带缓存)
+        cache_key_gt = f"detection_traj_gt_{video_id}"
+        if global_cache is not None and cache_key_gt in global_cache:
+            gt_results = global_cache[cache_key_gt]
+        else:
+            gt_results = extract_trajectory_detections(video_gt, self.detector)
+            if global_cache is not None: global_cache[cache_key_gt] = gt_results
+
+        # 3. 计算 ADE
+        score = AverageDisplacementError(gen_results, gt_results, H, W)
+        return score
+        
     def clear(self):
-        del self.det
+        if hasattr(self, 'detector'): del self.detector
+        torch.cuda.empty_cache()
         super().clear()
