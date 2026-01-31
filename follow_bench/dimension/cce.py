@@ -10,7 +10,7 @@ import torch
 from ..dimension import DimensionEvaluator
 from .metric import CameraCenteringError
 from ..utils.pretrain import (
-    get_yolo_detection_results, 
+    get_all_yolo_detections, 
     load_yolov8
 )
 from ..configs import CONFIG
@@ -25,41 +25,53 @@ class CameraCenteringErrorEvaluator(DimensionEvaluator):
     def prepare(self):  # noqa: ANN201, ANN101
         """Load the detector and call base prepare."""
         model_path = CONFIG.models.yolo
-        self.model = load_yolov8(self.device, model_path=model_path)
+        self.detector = load_yolov8(self.device, model_path=model_path)
         super().prepare()
 
-    def compute(self, **kwargs: Any):  # noqa: ANN201, ANN101
-        """Compute CCE for generated video.
-
-        Expected kwargs: 'tensor_gen', 'video_id', 'global_cache'. Returns a float
-        score in [0.0, 1.0], where higher indicates worse centering.
+    def compute(self, **kwargs: Any) -> float:
         """
-        video_gen: Tensor = kwargs.get('tensor_gen')
+        Execute calculation.
+        """
+        video_gen = kwargs.get('tensor_gen') # [T, 3, H, W]
         video_id = kwargs.get('video_id')
         global_cache = kwargs.get('global_cache')
-
-        # === 核心：检测结果缓存逻辑 ===
-        cache_key = f"detection_gen_{video_id}"
-        detections = None
-
-        # 1. 尝试从全局缓存读取 (可能由 SDR 指标先生成)
-        if global_cache is not None and cache_key in global_cache:
-            detections = global_cache[cache_key]
-            logger.info(f"CCE: Detection cache hit for {video_id}")
         
-        # 2. 若未命中，则运行 YOLOv8 批量检测
-        if detections is None:
-            # 内部调用 Ultralytics YOLO 的 Tensor 推理接口
-            detections = get_yolo_detection_results(video_gen, self.model)
-            if global_cache is not None:
-                global_cache[cache_key] = detections
-                logger.info(f"CCE: Detection cache updated for {video_id}")
+        if video_gen is None: return 1.0
 
-        # 3. 调用纯 Tensor Metric 进行计算
         H, W = video_gen.shape[2], video_gen.shape[3]
-        score = CameraCenteringError(detections, H, W)
+
+        # 1. 获取每一帧的所有检测结果
+        cache_key = f"detection_all_gen_{video_id}"
+        if global_cache is not None and cache_key in global_cache:
+            all_detections = global_cache[cache_key]
+        else:
+            all_detections = get_all_yolo_detections(video_gen, self.detector)
+            if global_cache is not None: global_cache[cache_key] = all_detections
+
+        # 2. 筛选出每帧的主角 (Largest BBox)
+        # metric.py 中的 CameraCenteringError 期望输入是 List[(bbox, conf) or None]
+        final_detections = []
         
-        return float(score)
+        for candidates in all_detections:
+            if not candidates:
+                final_detections.append(None)
+                continue
+            
+            # 策略：选择面积最大的框作为主角
+            # bbox: [x1, y1, x2, y2]
+            best_candidate = max(candidates, key=lambda x: (x[0][2]-x[0][0]) * (x[0][3]-x[0][1]))
+            
+            # metric.py 需要的格式通常是一个列表或元组，包含 bbox
+            # 这里我们传入 [(bbox, conf)] 这种 list 形式，适配 metric.py 的逻辑
+            final_detections.append([best_candidate[0]]) 
+
+        # 3. 调用 metric.py 计算
+        # 注意: metric.py 的 CameraCenteringError 函数签名是 (detection_results, H, W)
+        # 它内部循环 for res in detection_results: box = res[0]
+        # 所以我们上面 append([best_candidate[0]]) 是正确的
+        score = CameraCenteringError(final_detections, H, W)
+        
+        return score
     
     def clear(self):
         """释放局部模型引用，但不清除 global_cache"""
