@@ -102,64 +102,104 @@ def AverageDisplacementError(gen_results, gt_results, H, W):  # noqa: ANN201
     return np.mean(dists) if dists else 1.0
 
 
-def BackgroundSemanticConsistency(
-    ref_img_pil: Any,
+def BackgroundSemanticContinuity(
     video_gen: Tensor,
     clip_model: Any,
-    clip_proc: Any,
     detection_results: Any,
     device: Any,
-):  # noqa: ANN201
-    """Measure background semantic consistency using CLIP features.
-
-    The function masks out detected person regions in each frame, extracts CLIP
-    image features for the remaining background, and compares them to a
-    reference image embedding.
-
-    Args:
-        ref_img_pil: Reference image as a PIL image.
-        video_gen: Generated video tensor [T, 3, H, W].
-        clip_model: Loaded CLIP image encoder.
-        clip_proc: CLIP preprocessor that converts PIL image to model input.
-        detection_results: List of detection results per frame.
-        device: Torch device for computation.
-
-    Returns:
-        Mean cosine similarity between background embeddings and reference.
+    batch_size: int = 64
+):
     """
-    scores = []
-    T = video_gen.shape[0]
-    H, W = video_gen.shape[2], video_gen.shape[3]
+    计算背景语义连续性 (Background Semantic Continuity)。
     
-    # 预计算参考图特征
-    inputs_ref = clip_proc(images=ref_img_pil, return_tensors="pt").to(device)
-    with torch.no_grad():
-        ref_emb = clip_model.get_image_features(**inputs_ref)
+    衡量视频每一帧的背景与下一帧背景的语义相似度，反映背景的稳定性。
+    该指标不需要参考图。
+    
+    Args:
+        video_gen: [T, 3, H, W] 生成视频张量
+        clip_model: CLIP 模型
+        detection_results: 检测结果列表 (用于 Mask 掉人物)
+        device: 计算设备
+        batch_size: 推理时的 Batch Size
+        
+    Returns:
+        float: 相邻帧背景特征的平均余弦相似度 (0.0 ~ 1.0)
+    """
+    T, C, H, W = video_gen.shape
+    if T < 2:
+        return 0.0 # 视频太短无法计算连续性
+    
+    # ================= 阶段 1: GPU Masking =================
+    # 在 GPU 上直接将人物区域涂黑，只保留背景
+    # 使用 clone 防止修改原始视频数据
+    masked_video = video_gen.clone() 
     
     for i in range(T):
-        frame_tensor = video_gen[i].clone()  # [3, H, W]
-        
-        # Mask 掉人物
         res = detection_results[i]
         if res is not None:
-            box, _ = res
-            x1, y1, x2, y2 = map(int, box.tolist())
-            x1, y1 = max(0, x1), max(0, y1)
-            x2, y2 = min(W, x2), min(H, y2)
-            frame_tensor[:, y1:y2, x1:x2] = 0.0  # Black out
-
-        # 提取特征
-        img_pil = to_pil_image(frame_tensor.cpu())
-        inputs = clip_proc(images=img_pil, return_tensors="pt").to(device)
-        
-        with torch.no_grad():
-            curr_emb = clip_model.get_image_features(**inputs)
+            # 解析 Bbox: 假设格式为 [x1, y1, x2, y2]
+            # 兼容 list, tuple 或 tensor
+            box = res[0] if isinstance(res, (list, tuple)) else res
             
-        # 计算相似度
-        sim = F.cosine_similarity(curr_emb, ref_emb)
-        scores.append(sim.item())
-        
-    return sum(scores) / len(scores) if scores else 0.0
+            x1 = int(max(0, box[0].item()))
+            y1 = int(max(0, box[1].item()))
+            x2 = int(min(W, box[2].item()))
+            y2 = int(min(H, box[3].item()))
+            
+            # 将人物区域填黑 (0.0)
+            masked_video[i, :, y1:y2, x1:x2] = 0.0
+
+    # ================= 阶段 2: GPU Resize & Normalize =================
+    # 一次性处理所有帧 (Resize -> 224x224)
+    # CLIP 必须使用 bicubic 插值以保证特征准确性
+    frames_resized = F.interpolate(
+        masked_video, 
+        size=(224, 224), 
+        mode='bicubic', 
+        align_corners=False,
+        antialias=True
+    )
+    
+    # CLIP 标准化 (OpenAI Mean/Std)
+    mean = torch.tensor([0.48145466, 0.4578275, 0.40821073], device=device).view(1, 3, 1, 1)
+    std = torch.tensor([0.26862954, 0.26130258, 0.27577711], device=device).view(1, 3, 1, 1)
+    
+    frames_input = (frames_resized - mean) / std
+
+    # ================= 阶段 3: Batch Inference =================
+    # 提取所有帧的 Embedding
+    all_embeddings = []
+    
+    with torch.no_grad():
+        for i in range(0, T, batch_size):
+            batch = frames_input[i : i + batch_size]
+            
+            # 提取特征
+            batch_emb = clip_model.get_image_features(pixel_values=batch)
+            # 归一化 (计算 Cosine Similarity 前必须做)
+            batch_emb = F.normalize(batch_emb, p=2, dim=-1)
+            
+            all_embeddings.append(batch_emb)
+
+    # 拼接所有帧特征: [T, D]
+    if not all_embeddings:
+        return 0.0
+    embeddings = torch.cat(all_embeddings, dim=0)
+
+    # ================= 阶段 4: 计算相邻帧相似度 =================
+    # Frame[0] vs Frame[1]
+    # Frame[1] vs Frame[2]
+    # ...
+    # Frame[T-1] vs Frame[T]
+    
+    emb_t = embeddings[:-1]   # [0, 1, ..., T-2]
+    emb_t_plus_1 = embeddings[1:] # [1, 2, ..., T-1]
+    
+    # 计算点积 (因为已经归一化了，点积等于余弦相似度)
+    # dim=-1 表示在特征维度求和
+    similarities = (emb_t * emb_t_plus_1).sum(dim=-1)
+    
+    return float(similarities.mean().item())
 
 
 def CameraCenteringError(detection_results: Any, H: int, W: int):  # noqa: ANN201

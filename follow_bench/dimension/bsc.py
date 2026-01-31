@@ -9,7 +9,7 @@ from transformers import CLIPProcessor, CLIPModel
 from torchvision.models.detection import fasterrcnn_resnet50_fpn, FasterRCNN_ResNet50_FPN_Weights
 
 from ..dimension import DimensionEvaluator
-from .metric import BackgroundSemanticConsistency
+from .metric import BackgroundSemanticContinuity
 from ..utils.pretrain import get_detection_results, load_clip, load_faster_rcnn
 
 class BackgroundSemanticConsistencyEvaluator(DimensionEvaluator):
@@ -26,33 +26,29 @@ class BackgroundSemanticConsistencyEvaluator(DimensionEvaluator):
         super().prepare()
 
     def compute(self, **kwargs: Any):
-        """Compute background semantic consistency for a generated video.
+        """Compute background continuity.
 
-        Expected kwargs: 'tensor_gen', 'pillow_ref', 'video_id', 'global_cache'
-        Returns the mean CLIP similarity between masked-frame backgrounds and
-        the reference image embedding.
+        Expected kwargs: 'tensor_gen', 'video_id', 'global_cache'
+        Note: 'pillow_ref' is no longer required.
         """
-        # parse kwargs
         video_gen = kwargs.get('tensor_gen')
-        pillow_ref: Image = kwargs.get('pillow_ref')
         video_id = kwargs.get('video_id')
         global_cache = kwargs.get('global_cache')
         
-
+        # 1. Detection (带缓存)
         cache_key = f"detection_gen_{video_id}"
         if global_cache is not None and cache_key in global_cache:
-            # cache hits
             detections = global_cache[cache_key]
-        else: # cache not hits
+        else:
             detections = get_detection_results(video_gen, self.det)
             if global_cache is not None:
                 global_cache[cache_key] = detections
 
-        return float(BackgroundSemanticConsistency(
-            ref_img_pil=pillow_ref,
+        # 2. Compute Metric 
+        return float(BackgroundSemanticContinuity(
             video_gen=video_gen,
             clip_model=self.clip,
-            clip_proc=self.proc,
             detection_results=detections,
-            device=self.device
+            device=self.device,
+            batch_size=64
         ))
