@@ -1,5 +1,6 @@
 {
     "python.analysis.extraPaths": [
-        "/opt/liblibai-models/user-workspace2/users/xqy/library"
+        "/opt/liblibai-models/user-workspace2/users/xqy/library",
+        "/opt/liblibai-models/user-workspace2/users/xqy/project/FollowBench/third-party"
     ]
 }

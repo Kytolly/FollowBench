@@ -80,7 +80,6 @@ class BenchmarkDataset(Dataset):
         except FileNotFoundError:
             raise RuntimeError(f"Annotation file not found at {json_path}")
             
-    
     def _load_image(self, rel_path: str) -> "torch.Tensor":
         """Load an image and apply transforms.
 
@@ -93,7 +92,7 @@ class BenchmarkDataset(Dataset):
         path = os.path.join(self.data_root, rel_path)
         try:
             img = Image.open(path).convert('RGB')
-            return self.transform(img) # [Fix] Apply transform
+            return self.transform(img)
         except Exception as e:
             logging.error(f"Failed to load image {path}: {e}")
             return torch.zeros(3, self.opt.height, self.opt.width)

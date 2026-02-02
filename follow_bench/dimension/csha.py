@@ -25,8 +25,6 @@ class CameraSubjectHeadingAlignmentEvaluator(DimensionEvaluator):
     def compute(self, **kwargs: Any):
         """
         Compute CSHA score for the GENERATED video.
-        
-        Why only Gen? 
         CSHA is often an 'Absolute Quality' metric. We want to know if the 
         generated camera control is stable, regardless of whether the GT 
         camera was stable or erratic.
@@ -35,18 +33,11 @@ class CameraSubjectHeadingAlignmentEvaluator(DimensionEvaluator):
         to GT's specific camera behavior is required).
         """
         prediction = kwargs.get('tensor_gen')
-        
-        if prediction is None:
-            return 0.0
-        
-        if self.solver is None:
-            self.prepare()
-
         # 1. 提取生成视频的几何信息
         try:
             geo_info = self.solver.extract_full_geometry(prediction)
         except Exception as e:
-            self.logger.error(f"CSHA Geometry Extraction Failed: {e}")
+            logger.error(f"CSHA Geometry Extraction Failed: {e}")
             return 0.0
             
         if geo_info is None:

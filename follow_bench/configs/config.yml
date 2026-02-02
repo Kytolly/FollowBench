@@ -7,7 +7,7 @@ test:
     wham_vit_h: "third-party/WHAM/checkpoints/wham_vit_bedlam_w_3dpw.pth.tar"
     yolo: "models/yolov8x.pt"
   rules:
-    clip_len: 300
+    clip_len: 600
     fps: 60
     resolution_height: 704
     resolution_width: 1280

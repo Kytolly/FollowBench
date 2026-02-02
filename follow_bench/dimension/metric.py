@@ -332,79 +332,101 @@ def CameraSubjectHeadingAlignment(
     }
 
 
-def CameraTrajectoryError(
-    traj_gen: torch.Tensor, 
-    traj_gt: torch.Tensor,
-    eps: float = 1e-6
-):
+def CameraStability(
+    video_gen: Tensor,
+    target_size: int = 512
+) -> float:
     """
-    计算 CTE (Camera Trajectory Error) 的核心数学实现。
-    使用 Umeyama 算法求解 Sim(3) 变换 (s, R, t) 并计算对齐后的 RMSE。
+    计算相机稳定性。
+    使用 GPU 加速的相位相关法 (Phase Correlation) 估算帧间全局运动，
+    并计算运动加速度的平滑度。这个指标不是在看“相机走得对不对”，而是在看相机拿得稳不稳
 
     Args:
-        traj_gen: 生成视频的相机轨迹坐标 [N, 3] (Translation Vectors)
-        traj_gt:  真实视频的相机轨迹坐标 [N, 3] (Translation Vectors)
-        eps: 数值稳定性常数
+        video_gen: [T, 3, H, W] Normalized video tensor (0.0 ~ 1.0)
+        target_size: 计算 FFT 时的缩放尺寸，默认 512 以平衡速度和精度
 
     Returns:
-        float: CTE Score (RMSE after alignment)
+        float: 抖动分数 (Jitter Score). 0.0 表示完美平滑/匀速。
     """
-    assert traj_gen.shape == traj_gt.shape, f"Shape mismatch: {traj_gen.shape} vs {traj_gt.shape}"
-    N, D = traj_gen.shape  # N frames, D=3 dimensions
-
-    # 1. 去中心化 (Centering)
-    mu_gen = torch.mean(traj_gen, dim=0, keepdim=True) # [1, 3]
-    mu_gt = torch.mean(traj_gt, dim=0, keepdim=True)   # [1, 3]
-
-    y = traj_gen - mu_gen # [N, 3] (对应公式中的 y_i)
-    q = traj_gt - mu_gt   # [N, 3] (对应公式中的 q_i)
-
-    # 2. 计算协方差矩阵 (Covariance Matrix)
-    # H = sum(y_i * q_i^T) -> [D, D]
-    H = torch.matmul(y.transpose(0, 1), q) 
-
-    # 3. SVD 分解求解旋转 R
-    # H = U @ Sigma @ V.T
-    U, _, Vh = torch.linalg.svd(H) 
-    V = Vh.mH # PyTorch svd returns V^H (conjugate transpose), so V = Vh.mH
+    # 1. 检查输入并确保在 GPU
+    if video_gen is None:
+        return 0.0
     
-    # R = V @ S @ U.T
-    # 构造修正矩阵 S (diag(1, 1, det))
-    d = torch.det(torch.matmul(V, U.transpose(0, 1)))
-    S_mat = torch.eye(D, device=traj_gen.device)
-    S_mat[-1, -1] = d 
-    
-    R = torch.matmul(torch.matmul(V, S_mat), U.transpose(0, 1)) # [3, 3]
+    device = video_gen.device
+    if not video_gen.is_cuda and torch.cuda.is_available():
+        # 如果还在 CPU，尝试移动到 GPU (但通常 Loader 已经做好了)
+        video_gen = video_gen.to('cuda')
+        device = video_gen.device
 
-    # 4. 求解缩放 s (Scale)
-    # s = sum(y^T R^T q) / sum(|y|^2)
-    # 分子: trace(R^T @ y^T @ q) ??? 
-    # 更简单的写法: sum element-wise product of (y @ R.T) and q
-    y_rotated = torch.matmul(y, R.transpose(0, 1)) # [N, 3]
-    
-    numerator = torch.sum(y_rotated * q)
-    denominator = torch.sum(y * y)
-    
-    if denominator < eps:
-        s = torch.tensor(1.0, device=traj_gen.device)
+    T, C, H, W = video_gen.shape
+    if T < 2:
+        return 0.0
+
+    # 2. 预处理: RGB -> Grayscale -> Resize
+    # 权重: RGB -> Grayscale (Standard Rec. 601)
+    weights = torch.tensor([0.299, 0.587, 0.114], device=device).view(1, 3, 1, 1)
+    gray = F.conv2d(video_gen, weights) # [T, 1, H, W]
+
+    # Resize 到固定大小 (例如 512x512) 以保证 FFT 效率
+    if H > target_size or W > target_size:
+        gray_resized = F.interpolate(
+            gray, 
+            size=(target_size, target_size), 
+            mode='bilinear', 
+            align_corners=False
+        ).squeeze(1) # [T, 512, 512]
     else:
-        s = numerator / denominator
+        gray_resized = gray.squeeze(1)
+        target_size = H # 简化处理，假设方形或接近
 
-    # 5. 求解平移 t (Translation)
-    # t = mu_gt - s * R * mu_gen
-    # 注意维度: [1, 3] - s * [1, 3] @ [3, 3]^T 
-    t = mu_gt - s * torch.matmul(mu_gen, R.transpose(0, 1))
+    # 3. 加窗 (Hanning Window) 防止 FFT 边缘泄漏
+    hann = torch.hann_window(target_size, device=device)
+    window = hann.view(-1, 1) * hann.view(1, -1) # [Sz, Sz]
+    frames_windowed = gray_resized * window.unsqueeze(0)
 
-    # 6. 变换生成的轨迹 (Apply Transform)
-    # p_hat = s * p_gen @ R^T + t
-    traj_gen_aligned = s * torch.matmul(traj_gen, R.transpose(0, 1)) + t
+    # 4. 批量 FFT 计算 (PyTorch FFT 极快)
+    ffts = torch.fft.rfft2(frames_windowed)
 
-    # 7. 计算 CTE (RMSE)
-    diff = traj_gt - traj_gen_aligned
-    mse = torch.mean(torch.sum(diff ** 2, dim=1))
-    cte = torch.sqrt(mse)
+    # 5. 相位相关 (Phase Correlation)
+    # 计算相邻帧之间的互功率谱
+    f1 = ffts[:-1] # Frame t
+    f2 = ffts[1:]  # Frame t+1
+    
+    cross_prod = f1 * torch.conj(f2)
+    eps = 1e-8
+    cross_power = cross_prod / (torch.abs(cross_prod) + eps)
+    
+    # 逆变换得到响应图 (Impulse Response)
+    response = torch.fft.irfft2(cross_power) # [T-1, Sz, Sz]
 
-    return cte.item()
+    # 6. 寻找峰值位置 (Peak Finding -> Shift Estimation)
+    B_res, H_res, W_res = response.shape
+    response_flat = response.view(B_res, -1)
+    argmax = torch.argmax(response_flat, dim=1)
+    
+    dy = argmax // W_res
+    dx = argmax % W_res
+    
+    # 处理循环位移 (Negative shifts appear at the end)
+    dy = torch.where(dy > H_res // 2, dy - H_res, dy)
+    dx = torch.where(dx > W_res // 2, dx - W_res, dx)
+    
+    velocities = torch.stack([dx, dy], dim=1).float() # [T-1, 2]
+
+    # 7. 计算抖动 (Jitter = Magnitude of Acceleration)
+    if velocities.shape[0] < 2:
+        return 0.0
+        
+    # 加速度 = 速度差分
+    acceleration = velocities[1:] - velocities[:-1]
+    
+    # 计算加速度的 L2 范数并求平均
+    jitter_magnitude = torch.norm(acceleration, dim=1).mean()
+    
+    # 归一化: 经验值 2.0 像素/帧^2 的抖动已经很大了
+    score = torch.tanh(jitter_magnitude / 2.0).item()
+    
+    return float(score)
 
 
 def DynamicDegree(gen_flows: Tensor):  # noqa: ANN201
