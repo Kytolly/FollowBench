@@ -4,17 +4,16 @@ from pathlib import Path
 
 # ================= 配置区域 =================
 # 您的真实数据根目录
-ASSETS_ROOT = r"assets/test"
+ASSETS_ROOT = r"assets/kling/test_unseen"
 
 # 输出文件路径 (根据您之前的上下文，放在 cache/gen 下)
-OUTPUT_FILE = r"templates/submission_example.json"
+OUTPUT_FILE = r"templates/submission_kling.json"
 
 # 元数据配置
 META_INFO = {
-    "team_name": "MyTeam",
-    "model_name": "EgoGen-V1",
-    # "modal": "vace_instruct",
-    # "mode": "easy",
+    "team_name": "Kytolly",
+    "model_name": "Kling AI",
+    "mode": "test_unseen",
     "contact": "email@example.com"
 }
 # ===========================================
@@ -47,7 +46,7 @@ def build_submission():
             
             # 按照要求的结构填入
             results[case_id] = {
-                "generated video": f"{case_id}/exo.mp4",
+                "generated video": f"{case_id}/{case_id}.mp4",
                 # "prompt": "[EGO2EXO] [REF] a woman [EGO] walking [TARGET-VIEW] Third-person medium shot, urban road"
             }
             

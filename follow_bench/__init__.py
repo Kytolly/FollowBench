@@ -13,7 +13,7 @@ logger = logging.getLogger()
 import torch
 from torchvision.transforms.functional import to_pil_image
 
-from .dimension import BenchRouter, DIMENSION_NAMES
+from .dimension import BenchRouter
 from .record.recoder import Recorder
 from .dataflow.submission import Submission
 from .dataflow.option import Options

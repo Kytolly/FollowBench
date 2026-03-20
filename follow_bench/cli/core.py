@@ -26,20 +26,25 @@ from ..dataflow.submission import Submission
 
 @click.group()
 def cli() -> None:
-    """EgoExo Translation Benchmark Command Line Tool.
+    """Benchmark Command Line Tool.
     
-    This tool provides commands for validating submissions and running
-    benchmark evaluations on ego-to-exocentric video translation models.
+    This tool provides commands for validating submissions 
+    and running benchmark evaluations on generated videos.
     """
     pass
 
-
 @cli.command()
 @click.option(
-    '--submission', 
-    required=True, 
+    '--config', 
+    default='follow_bench/configs/config.yml', 
     type=click.Path(exists=True),
-    help='Path to submission.json file containing model results'
+    help='Config file for benchmark running.'
+)
+@click.option(
+    '--assets', 
+    default='assets/followbench', 
+    type=click.Path(exists=True),
+    help='Assets root directory containing dataset (default: assets/followbench)'
 )
 @click.option(
     '--output', 
@@ -48,16 +53,29 @@ def cli() -> None:
     help='Output directory for evaluation results (default: ./output)'
 )
 @click.option(
-    '--assets', 
-    default='./assets', 
-    type=click.Path(exists=True),
-    help='Assets directory containing test data (default: ./assets)'
-)
-@click.option(
     '--device',
     default='cuda',
     type=click.Choice(['cuda', 'cpu']),
     help='Device to run evaluation on (default: cuda)'
+)
+@click.option(
+    '--submission_source', 
+    required=True, 
+    type=click.Path(exists=True),
+    help='Path to submission source generated videos root directory.'
+)
+@click.option(
+    '--submission_json', 
+    required=True, 
+    type=click.Path(exists=True),
+    help='Path to submission.json file containing model results relative path of generated videos root'
+)
+@click.option(
+    '--list',
+    default=False,
+    required=False, 
+    type=click.Choice([True, False]),
+    help='List all configurations.'
 )
 def evaluate(submission: str, output: str, assets: str, device: str) -> None:
     """Run full evaluation on a submission.
@@ -81,20 +99,6 @@ def evaluate(submission: str, output: str, assets: str, device: str) -> None:
         click.echo(f"❌ Evaluation failed: {e}", err=True)
         sys.exit(1)
 
-
-@cli.command()
-@click.option(
-    '--submission', 
-    required=True, 
-    type=click.Path(exists=True),
-    help='Path to submission JSON file or directory'
-)
-@click.option(
-    '--source', 
-    required=True, 
-    type=click.Path(exists=True),
-    help='Path to video source root directory'
-)
 def validate(submission: str, source: str) -> None:
     """Check if submission format is valid.
     

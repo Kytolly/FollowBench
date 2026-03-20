@@ -218,3 +218,4 @@ configs/config.yml
 third-party/
 models/
 .vscode/
+data/

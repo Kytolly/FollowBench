@@ -20,4 +20,7 @@ def main() -> None:
 
 
 if __name__ == '__main__':
+    '''
+    python main.py evaluate
+    '''
     main()
