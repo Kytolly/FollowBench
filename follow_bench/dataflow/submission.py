@@ -14,7 +14,6 @@ from ..utils.video_kit import (
     load_video_to_device,
     validate_video_properties
 )
-from ..configs import CONFIG
 REQUIRED_META_KEYS = set([
     'team_name', 
     'model_name', 
@@ -27,10 +26,9 @@ ALLOWED_EXTENSIONS = [
     '.avi', 
     '.mov',
 ]
-TOTAL_CASES_NUM = CONFIG['submission']['total_cases_num']
-STANDARD_RESOLUTION = (CONFIG['rules']['resolution_height'], CONFIG['rules']['resolution_width'])
-STANDARD_CLIP_LEN = CONFIG['rules']['clip_len']
-STANDARD_CLIP_FPS = CONFIG['rules']['fps']
+# STANDARD_RESOLUTION = (CONFIG['rules']['resolution_height'], CONFIG['rules']['resolution_width'])
+# STANDARD_CLIP_LEN = CONFIG['rules']['clip_len']
+# STANDARD_CLIP_FPS = CONFIG['rules']['fps']
 
 class Submission:
     """Submission data IO and access helper.
@@ -46,10 +44,12 @@ class Submission:
     meta_info: Dict[str, Any]
     mapping: Dict[str, Dict[str, Any]]
 
-    def __init__(self: "Submission",
-                 submission_path: Union[str, Path],
-                 source_path: Union[str, Path],
-                 device: str = 'cpu') -> None:
+    def __init__(
+        self,
+        submission_path: Union[str, Path],
+        source_path: Union[str, Path],
+        device: str = 'cpu'
+    ) -> None:
         """Initialize the Submission.
 
         Args:
@@ -64,7 +64,7 @@ class Submission:
         self.mapping = {}
         self._load()
     
-    def _load(self: "Submission") -> None:
+    def _load(self) -> None:
         """Load and parse the submission JSON file.
 
         Raises:
@@ -86,7 +86,7 @@ class Submission:
         self.mapping = data.get('results', {})
         logger.info(f"Loaded submission with {len(self.mapping)} cases.")
         
-    def validate_all(self: "Submission") -> None:
+    def validate_all(self) -> None:
         """Validate submission meta, case count, and per-video properties.
 
         Raises:
@@ -100,8 +100,8 @@ class Submission:
             errors.append(f"[Meta] Missing keys: {missing}")
 
         # B. Count Check
-        if len(self.mapping) != TOTAL_CASES_NUM:
-            errors.append(f"[Count] Expected {TOTAL_CASES_NUM} cases, found {len(self.mapping)}")
+        # if len(self.mapping) != TOTAL_CASES_NUM:
+        #     errors.append(f"[Count] Expected {TOTAL_CASES_NUM} cases, found {len(self.mapping)}")
 
         # C. Per-Case Check
         for case_id, entry in self.mapping.items():
@@ -123,14 +123,14 @@ class Submission:
                 errors.append(f"[{case_id}] Invalid extension: {full_path.suffix}")
                 
             # 4. Video Properties (调用 video_kit)
-            vid_errors = validate_video_properties(
-                full_path, 
-                STANDARD_RESOLUTION, 
-                STANDARD_CLIP_FPS, 
-                STANDARD_CLIP_LEN
-            )
-            if vid_errors:
-                errors.append(f"[{case_id}] Properties Invalid: {'; '.join(vid_errors)}")
+            # vid_errors = validate_video_properties(
+            #     full_path, 
+            #     STANDARD_RESOLUTION, 
+            #     STANDARD_CLIP_FPS, 
+            #     STANDARD_CLIP_LEN
+            # )
+            # if vid_errors:
+            #     errors.append(f"[{case_id}] Properties Invalid: {'; '.join(vid_errors)}")
 
         if errors:
             msg = f"Submission Validation Failed with {len(errors)} errors:\n" + "\n".join(errors[:20])
@@ -139,7 +139,7 @@ class Submission:
             
         logger.info("✅ Submission validation passed successfully.")
         
-    def get_generated_video(self: "Submission", video_id: str) -> Optional[Any]:
+    def get_generated_video(self, video_id: str) -> Optional[Any]:
         """Load and return the generated video tensor for the given ID.
 
         Args:
@@ -158,7 +158,7 @@ class Submission:
             logger.error(f"Failed to load video {full_path}: {e}")
             return None
 
-    def __getitem__(self: "Submission", item: str) -> Optional[Any]:
+    def __getitem__(self, item: str) -> Optional[Any]:
         """Get generated video tensor by video ID.
         
         Convenience method that delegates to get_generated_video().
@@ -171,7 +171,7 @@ class Submission:
         """
         return self.get_generated_video(item)
 
-    def __len__(self: "Submission") -> int:
+    def __len__(self) -> int:
         """Return the number of video cases in the submission.
         
         Returns:

@@ -36,7 +36,7 @@ class BenchmarkDataLoader:
             num_workers=int(opt.num_workers)
         )
 
-    def load_data(self) -> "BenchmarkDataLoader":
+    def load_data(self):
         """Return self for API compatibility with other frameworks.
         
         Returns:

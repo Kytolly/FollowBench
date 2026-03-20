@@ -6,10 +6,10 @@ from pathlib import Path
 # ================= 配置区域 =================
 # 数据集根目录 (请根据实际情况修改，这里指向 assets/Test)
 # 注意：生成的 json 中路径将是相对于此目录的相对路径 (e.g., "test-case-000/ego.mp4")
-ASSETS_ROOT = r"assets/train"
+ASSETS_ROOT = r"assets/followbench/test_unseen"
 
 # 输出文件路径
-OUTPUT_FILE = r"templates/annotation_example.json"
+OUTPUT_FILE = r"templates/index.json"
 
 # 默认 Prompt 模板 (因为脚本无法自动理解视频内容，这里使用占位符，您后续可以手动或用其他脚本填充)
 # DEFAULT_PROMPT = "[EGO2EXO] [REF] a person [EGO] doing something [TARGET-VIEW] Third-person medium shot, environment"
@@ -40,14 +40,7 @@ def build_annotation():
         # 注意：这里使用正斜杠 / 以保证跨平台兼容性和 JSON 格式标准
         ego_path = f"{case_id}/ego.mp4"
         exo_path = f"{case_id}/exo.mp4"
-        
-        # 2. Reference 逻辑: 优先找 ref.png, 找不到则用 exo.mp4
-        ref_img_path = case_dir / "ref.png"
-        if ref_img_path.exists():
-            ref_path = f"{case_id}/ref.png"
-        else:
-            # print(f"[Info] ref.png not found for {case_id}, using exo.mp4 as reference.")
-            ref_path = f"{case_id}/exo.mp4"
+        ref_path = f"{case_id}/ref_img.jpg"
 
         # 3. 构造 Prompt 字典 (对齐 caption.json 格式)
         # 如果您有 csv 或其他元数据文件包含真实 prompt，可以在这里读取并替换 DEFAULT_PROMPT
@@ -60,9 +53,9 @@ def build_annotation():
 
         # 4. 组装 Entry
         annotation_data[case_id] = {
-            "the first view": ego_path,
-            "the third view": exo_path,
-            "reference": ref_path,
+            "ego video path": ego_path,
+            "exo video path": exo_path,
+            "reference image path": ref_path,
             # "prompts": prompts,
             # "negative_prompt": NEGATIVE_PROMPT
         }
@@ -74,7 +67,7 @@ def build_annotation():
     try:
         with open(OUTPUT_FILE, 'w', encoding='utf-8') as f:
             json.dump(annotation_data, f, indent=4, ensure_ascii=False)
-        print(f"\n✅ Annotation file built successfully!")
+        print(f"\n✅ Index file built successfully!")
         print(f"   Path: {OUTPUT_FILE}")
         print(f"   Total cases: {len(annotation_data)}")
         

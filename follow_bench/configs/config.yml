@@ -1,18 +1,23 @@
 repo_id: "Kytolly/FollowBench"
+device: "cuda:2"
 assets:
   path: "assets/followbench"
 output:
   path: "output/"
-device: "cuda:2"
 rules:
   clip_len: 600
   fps: 60
-  resolution_height: 704
-  resolution_width: 1280
+  height: 704
+  width: 1280
+submission:
+  source_path: "assets/kling"
+  json_path: "templates/submission_kling.json"
+meta:
+  team_name: "Kytolly"
+  model_name: "Kling AI"
+  split: "test_unseen"
+  contact: "kytolly.xqy@gmail.com"
 dimensions:
   - mse
   - ssim
   - lpips
-submission:
-  source_path: "assets/kling"
-  json_path: "templates/submission_kling.json"

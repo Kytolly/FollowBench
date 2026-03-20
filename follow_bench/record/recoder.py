@@ -12,6 +12,8 @@ import logging
 from typing import Any, Dict, Union
 logger = logging.getLogger()
 
+from ..configs import MetaConfig
+
 class Recorder:
     """Collect and save evaluation results.
 
@@ -19,10 +21,9 @@ class Recorder:
         meta: Metadata dictionary (must include team_name, model_name, etc.).
         output_dir: Directory where reports will be saved.
     """
-    def __init__(self, meta: Dict[str, Any], output_dir: str) -> None:
-        self.meta: Dict[str, Any] = meta
-        self.record_time: str = datetime.now().isoformat()
-        self.meta["timestamp"] = self.record_time
+    def __init__(self, meta: MetaConfig, output_dir: str) -> None:
+        self.meta: MetaConfig = meta
+        self.record_time: str = meta.record_time
         self.output_dir: str = output_dir
         os.makedirs(self.output_dir, exist_ok=True)
         
@@ -80,7 +81,7 @@ class Recorder:
         
         # 构造最终的 JSON 结构: meta 在最顶层，随后是各指标
         final_report = {
-            "meta": self.meta,
+            "meta": dict(self.meta),
             **self.data  # 解包指标数据
         }
         

@@ -28,7 +28,7 @@ class BenchmarkDataset(Dataset):
             opt: Options object with runtime configuration.
         """
         self.opt = opt
-        self.annotation: Dict[str, Any] = {}
+        self.index: Dict[str, Any] = {}
         self.transform = transforms.Compose([
             transforms.Resize((opt.height, opt.width)),
             transforms.ToTensor(),
@@ -40,9 +40,8 @@ class BenchmarkDataset(Dataset):
         self.data_root = os.path.join(self.opt.assets, self.opt.phase)
         
         # 2. 加载标注
-        self._load_metadata()
-        self.dataset = self.caption if self.opt.phase == 'train' else self.annotation
-        self.ids = list(self.dataset.keys())
+        self._load_index()
+        self.ids = list(self.index.keys())
 
     def _ensure_dataset_exists(self) -> None:
         """Ensure the dataset exists locally, downloading from HuggingFace if needed.
@@ -66,19 +65,18 @@ class BenchmarkDataset(Dataset):
         except Exception as e:
             raise RuntimeError(f"Failed to download dataset: {e}")
         
-    def _load_metadata(self) -> None:
-        """Load annotation metadata for the selected phase.
+    def _load_index(self) -> None:
+        """Load index for the selected phase.
 
         Raises:
-            RuntimeError: If annotation file is not found.
+            RuntimeError: If Index file is not found.
         """
-        # annotation.json 位于 assets/train|test/annotation.json
-        json_path = os.path.join(self.data_root, f'annotation.json')
+        json_path = os.path.join(self.data_root, 'index.json')
         try:
             with open(json_path, 'r', encoding='utf-8') as f:
-                self.annotation = json.load(f)
+                self.index = json.load(f)
         except FileNotFoundError:
-            raise RuntimeError(f"Annotation file not found at {json_path}")
+            raise RuntimeError(f"Index file not found at {json_path}")
             
     def _load_image(self, rel_path: str) -> "torch.Tensor":
         """Load an image and apply transforms.
@@ -126,11 +124,11 @@ class BenchmarkDataset(Dataset):
             A dict containing 'video_id', 'ego_video', 'exo_video', and 'ref_image'.
         """
         vid_id = self.ids[index]
-        data = self.dataset[vid_id]
+        data = self.index[vid_id]
         
-        ego_video = self._load_video(data['the first view'])
-        exo_video = self._load_video(data['the third view']) # GT
-        ref_img = self._load_image(data['reference'])
+        ego_video = self._load_video(data['ego video path'])
+        exo_video = self._load_video(data['exo video path']) # GT
+        ref_img = self._load_image(data['reference image path'])
         
         return {
             'video_id': vid_id,

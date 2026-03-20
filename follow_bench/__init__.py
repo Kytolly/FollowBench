@@ -8,17 +8,29 @@ from pathlib import Path
 from typing import Union
 from tqdm import tqdm
 import logging
+DETAILED_FORMAT = (
+    '%(asctime)s | '
+    '%(levelname)-s | '
+    '%(name)s | '
+    '%(filename)s:%(lineno)d | '
+    '%(funcName)s() | ' 
+    # 'PID:%(process)d | TID:%(thread)d | '
+    '%(message)s'
+)
+logging.basicConfig(
+    level=logging.INFO,
+    format=DETAILED_FORMAT,
+    datefmt='%Y-%m-%d %H:%M:%S',
+    force=True
+)
 logger = logging.getLogger()
 
 import torch
 from torchvision.transforms.functional import to_pil_image
 
-from .dimension import BenchRouter
-from .record.recoder import Recorder
+from .configs import BaseEnvConfig        
 from .dataflow.submission import Submission
 from .dataflow.option import Options
-from .dataflow.loader import BenchmarkDataLoader
-from .configs import CONFIG
 
 
 class Bench:
@@ -37,22 +49,19 @@ class Bench:
         router: BenchRouter instance for metric computation
     """
     
-    def __init__(self, device: str, assets_root: Union[str, Path] = 'assets/'):
+    def __init__(self, cfg: BaseEnvConfig):
         """Initialize the benchmark engine.
         
         Args:
             device: Computing device to use ('cuda' or 'cpu')
             assets_root: Path to the assets directory containing test data
         """
-        self.device = device
-        self.assets_root = Path(assets_root)
-        self.router = BenchRouter(device, self.assets_root)
-        
-        # Configure logging
-        logging.basicConfig(level=logging.INFO)
-        self.logger = logging.getLogger("EgoExoBench")
+        self.device = cfg.device
+        self.assets_root = Path(cfg.assets.path)
+        from .dimension import BenchRouter
+        self.router = BenchRouter(self.device)
 
-    def run(self, opt: Options, submission: Submission):
+    def run(self, cfg: BaseEnvConfig, submission: Submission):
         """Execute the benchmark evaluation pipeline.
         
         Optimized flow:
@@ -65,36 +74,39 @@ class Bench:
             opt: Configuration options for the evaluation
             submission: Submission object containing generated videos
         """
-        output_dir = Path(opt.output_dir)
+        output_dir = Path(cfg.output.path)
         output_dir.mkdir(parents=True, exist_ok=True)
         
         # 1. Prepare DataLoader
         try:
+            from .dataflow.loader import BenchmarkDataLoader
+            from .dataflow.option import Options
+            opt = Options(assets=cfg.assets.path, height=cfg.rules.height, width=cfg.rules.width, phase=cfg.meta.split)
             loader_wrapper = BenchmarkDataLoader(opt)
             dataloader = loader_wrapper.dataloader
-            meta = loader_wrapper.dataset.metadata
         except Exception as e:
-            self.logger.error(f"Failed to create DataLoader: {e}")
+            logger.error(f"Failed to create DataLoader: {e}")
             raise e
 
         # 2. Initialize Recorder
-        recorder = Recorder(meta, output_dir)
+        from .record.recoder import Recorder
+        recorder = Recorder(cfg.meta, output_dir)
         
         # 3. Prepare Evaluators
-        metrics_list = opt.metrics
+        metrics_list = cfg.metrics
         active_evaluators = {}
         
-        self.logger.info("Preparing evaluators...")
+        logger.info("Preparing evaluators...")
         for metric_name in metrics_list:
             try:
                 evaluator = self.router.get_evaluator(metric_name)
                 evaluator.prepare()
                 active_evaluators[metric_name] = evaluator
             except Exception as e:
-                self.logger.error(f"Failed to initialize evaluator for {metric_name}: {e}")
+                logger.error(f"Failed to initialize evaluator for {metric_name}: {e}")
 
         # 4. Main Evaluation Loop (One Pass)
-        self.logger.info(f"Starting Evaluation on {len(dataloader)} batches...")
+        logger.info(f"Starting Evaluation on {len(dataloader)} batches...")
         
         # Clear router cache before starting
         self.router.global_cache.clear()
@@ -114,7 +126,7 @@ class Bench:
                 # Retrieve Generated Video
                 gen_video = submission.get_generated_video(vid_id)
                 if gen_video is None:
-                    self.logger.warning(f"Missing generation for {vid_id}, skipping.")
+                    logger.warning(f"Missing generation for {vid_id}, skipping.")
                     continue
                 
                 tensor_gen = gen_video.to(self.device)
@@ -151,7 +163,7 @@ class Bench:
                             recorder.update(vid_id, {name: score})
                             
                     except Exception as e:
-                        self.logger.error(f"Error computing {name} for {vid_id}: {e}")
+                        logger.error(f"Error computing {name} for {vid_id}: {e}")
 
                 # [Optimization] Immediate Cleanup for Per-Video Cache
                 # Clear detection/flow results specific to this video ID to save VRAM.
@@ -167,7 +179,7 @@ class Bench:
                 del tensor_gen
 
         # 5. Finalize Global Metrics (FVD, SCCR)
-        self.logger.info("Finalizing global metrics...")
+        logger.info("Finalizing global metrics...")
         for name, evaluator in active_evaluators.items():
             if hasattr(evaluator, 'finalize_metric'):
                 try:
@@ -181,7 +193,7 @@ class Bench:
                         recorder.update("Dataset_Global", {name: global_score})
                         
                 except Exception as e:
-                    self.logger.error(f"Error finalizing {name}: {e}")
+                    logger.error(f"Error finalizing {name}: {e}")
             
             # Cleanup evaluator resources
             evaluator.clear()
@@ -189,4 +201,4 @@ class Bench:
         # 6. Save Report
         recorder.save_report()
         self.router.global_cache.clear()
-        self.logger.info(f"Evaluation complete. Results saved to {output_dir}")
+        logger.info(f"Evaluation complete. Results saved to {output_dir}")
