@@ -1,0 +1,313 @@
+action
+unique_items: 309
+total_occurrences: 13094
+
+    1. walking: 2693
+    2. walking away: 1880
+    3. standing: 1386
+    4. facing: 1296
+    5. facing away: 1178
+    6. sitting: 807
+    7. looking: 537
+    8. holding: 467
+    9. riding: 316
+   10. carrying: 315
+   11. playing: 151
+   12. looking towards: 130
+   13. pulling: 106
+   14. walking down: 85
+   15. playing foosball: 72
+   16. walking towards: 61
+   17. shopping: 61
+   18. using: 60
+   19. working: 60
+   20. standing near: 57
+   21. walking through: 57
+   22. walking up: 54
+   23. looking out: 52
+   24. holding onto: 38
+   25. playing table: 38
+   26. playing table tennis: 38
+   27. facing forward: 33
+   28. walking across: 33
+   29. standing next: 33
+   30. shopping bag: 31
+   31. pushing: 31
+   32. looking forward: 30
+   33. standing facing: 29
+   34. standing facing away: 29
+   35. crossing: 27
+   36. shopping cart: 26
+   37. looking down: 23
+   38. walking forward: 22
+   39. walking along: 20
+   40. face: 19
+   41. moving: 19
+   42. holding hands: 19
+   43. facing towards: 17
+   44. playing badminton: 16
+   45. leaning: 15
+   46. walking while: 15
+   47. standing behind: 14
+   48. talking: 14
+   49. walking beside: 13
+   50. drink: 13
+   51. walking or: 12
+   52. walking beside them: 12
+   53. face mask: 11
+   54. eating: 11
+   55. walking next: 10
+   56. holding something: 9
+   57. looking into: 9
+   58. sitting facing: 9
+   59. sitting facing away: 9
+   60. walking while pulling: 9
+   61. looking away: 9
+   62. leaning against: 9
+   63. waiting: 8
+   64. playing foosball they: 8
+   65. walking or standing: 7
+   66. walking under: 7
+   67. running: 7
+   68. sitting down: 7
+   69. standing by: 7
+   70. looking out over: 7
+   71. holding up: 6
+   72. browsing: 6
+   73. walking they: 6
+   74. looking around: 6
+   75. playing ping: 6
+   76. playing ping pong: 6
+   77. play: 5
+   78. moving away: 5
+   79. sitting or: 5
+   80. looking forward presumably: 5
+   81. looking ahead: 5
+   82. walking while holding: 5
+   83. shop: 5
+   84. walking alongside: 4
+   85. playing or: 4
+   86. playing or observing: 4
+   87. standing still: 4
+   88. looking forward they: 4
+   89. walking down stairs: 4
+   90. moving towards: 3
+   91. sitting or standing: 3
+   92. working behind: 3
+   93. walking holding: 3
+   94. shopping cart down: 3
+   95. moving through: 3
+   96. walking slightly: 3
+   97. holding chopsticks: 3
+   98. looking outwards: 3
+   99. looking upwards: 3
+  100. browse: 3
+  101. looking inside: 3
+  102. drinking: 3
+  103. walking forward while: 2
+  104. play foosball: 2
+  105. looking downwards: 2
+  106. pull: 2
+  107. pull ups: 2
+  108. walking out: 2
+  109. facing them: 2
+  110. walking holding hands: 2
+  111. working or: 2
+  112. working or studying: 2
+  113. holding his: 2
+  114. holding his phone: 2
+  115. walking slightly ahead: 2
+  116. standing inside: 2
+  117. looking towards another: 2
+  118. eating something: 2
+  119. playing foosball he: 2
+  120. standing outside: 2
+  121. walking he: 2
+  122. eating food: 2
+  123. riding down: 2
+  124. walking down stone: 2
+  125. looking back: 2
+  126. looking out through: 2
+  127. looking forward seemingly: 2
+  128. walking forward looking: 2
+  129. standing opposite: 2
+  130. standing opposite them: 2
+  131. looking out towards: 2
+  132. holding something small: 2
+  133. holding what: 2
+  134. holding what appears: 2
+  135. carrying two: 2
+  136. carrying something: 2
+  137. walking into: 2
+  138. walking forward away: 2
+  139. looking up: 2
+  140. playing foosball another: 2
+  141. looking down possibly: 2
+  142. moving upwards: 2
+  143. sitting within: 1
+  144. using her: 1
+  145. using her mobile: 1
+  146. holding something above: 1
+  147. moving deeper: 1
+  148. moving deeper into: 1
+  149. crossing facing: 1
+  150. crossing facing away: 1
+  151. walking alongside them: 1
+  152. sitting or squatting: 1
+  153. sitting inside: 1
+  154. facing perspective: 1
+  155. walking within: 1
+  156. facing forward they: 1
+  157. shopping area: 1
+  158. running away: 1
+  159. standing outdoors: 1
+  160. standing outdoors facing: 1
+  161. walking forward they: 1
+  162. walking ahead: 1
+  163. moving around: 1
+  164. playing foosball standing: 1
+  165. walking stick: 1
+  166. walking stick or: 1
+  167. playing foosball holding: 1
+  168. walking she: 1
+  169. holding another: 1
+  170. holding another umbrella: 1
+  171. waiting area: 1
+  172. walking or running: 1
+  173. looking forward towards: 1
+  174. looking off: 1
+  175. leaning towards: 1
+  176. looking out she: 1
+  177. using one: 1
+  178. looking down seemingly: 1
+  179. facing down: 1
+  180. walking seen: 1
+  181. browsing or: 1
+  182. browsing or selecting: 1
+  183. use: 1
+  184. walking his: 1
+  185. walking his dog: 1
+  186. move: 1
+  187. move through: 1
+  188. walking downhill: 1
+  189. checking: 1
+  190. looking back or: 1
+  191. holding onto two: 1
+  192. holding her: 1
+  193. holding her phone: 1
+  194. carrying another: 1
+  195. carrying another bag: 1
+  196. looking back towards: 1
+  197. eating or: 1
+  198. eating or interacting: 1
+  199. walking or rollerblading: 1
+  200. walking away while: 1
+  201. shopping cart they: 1
+  202. looking forward beside: 1
+  203. standing looking: 1
+  204. drink she: 1
+  205. shop window: 1
+  206. carrying luggage: 1
+  207. standing centered: 1
+  208. walking facing: 1
+  209. walking facing away: 1
+  210. standing another: 1
+  211. standing another person: 1
+  212. looking forward another: 1
+  213. leaning over: 1
+  214. holding several: 1
+  215. holding several folded: 1
+  216. walking away holding: 1
+  217. leaving: 1
+  218. facing into: 1
+  219. standing both: 1
+  220. facing right: 1
+  221. walking near: 1
+  222. walking side: 1
+  223. walking side by: 1
+  224. play foosball they: 1
+  225. walking beside her: 1
+  226. standing further: 1
+  227. standing further down: 1
+  228. walking wearing: 1
+  229. holding hands one: 1
+  230. shopping complex: 1
+  231. shopping complex entrance: 1
+  232. carrying two shopping: 1
+  233. shopping bags: 1
+  234. shopping cart beside: 1
+  235. shop holding: 1
+  236. holding gloves: 1
+  237. playing foosball gripping: 1
+  238. crossing they: 1
+  239. walking slightly behind: 1
+  240. walking together: 1
+  241. walking together holding: 1
+  242. playing foosball facing: 1
+  243. moving down: 1
+  244. playing foosball actively: 1
+  245. walking hand: 1
+  246. walking or riding: 1
+  247. standing while: 1
+  248. standing while looking: 1
+  249. drinking something: 1
+  250. drinking something they: 1
+  251. standing near another: 1
+  252. sitting or riding: 1
+  253. walking they also: 1
+  254. facing forward driving: 1
+  255. looking outside: 1
+  256. walking outdoors: 1
+  257. standing under: 1
+  258. standing still near: 1
+  259. working out: 1
+  260. sitting near: 1
+  261. sitting down looking: 1
+  262. looking towards them: 1
+  263. work: 1
+  264. looking downwards holding: 1
+  265. looking jacket: 1
+  266. facing forward possibly: 1
+  267. sitting down facing: 1
+  268. facing forward towards: 1
+  269. cross: 1
+  270. cross like: 1
+  271. cross like markings: 1
+  272. carrying two black: 1
+  273. crossing heading: 1
+  274. crossing heading towards: 1
+  275. facing chair: 1
+  276. shopping cart nearby: 1
+  277. facing forward presumably: 1
+  278. facing uphill: 1
+  279. facing uphill further: 1
+  280. walking or crouching: 1
+  281. lean: 1
+  282. walking forward facing: 1
+  283. looking towards other: 1
+  284. standing holding: 1
+  285. walking or jogging: 1
+  286. holding onto luggage: 1
+  287. walking while talking: 1
+  288. looking surprised: 1
+  289. looking surprised or: 1
+  290. walking alongside another: 1
+  291. walking close: 1
+  292. walking close beside: 1
+  293. waiting or: 1
+  294. waiting or observing: 1
+  295. looking around or: 1
+  296. queue: 1
+  297. queue or: 1
+  298. queue or counter: 1
+  299. looking forward she: 1
+  300. face mask they: 1
+  301. sitting alone: 1
+  302. drink they: 1
+  303. moving up: 1
+  304. standing still or: 1
+  305. walking slowly: 1
+  306. looking upwards they: 1
+  307. moving forward: 1
+  308. moving forward likely: 1
+  309. holding something blue: 1

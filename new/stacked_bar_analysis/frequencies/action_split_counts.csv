@@ -1,0 +1,32 @@
+﻿term,train,test_seen,test_unseen,total,unseen_only
+walking,1958,414,321,2693,0
+standing,936,256,194,1386,0
+facing,929,232,134,1295,0
+sitting,653,142,12,807,0
+looking,321,95,120,536,0
+holding,298,53,116,467,0
+riding,236,58,22,316,0
+carrying,214,45,56,315,0
+playing,47,9,95,151,0
+pulling,73,14,19,106,0
+shopping,43,8,10,61,0
+working,46,11,3,60,0
+using,48,10,2,60,0
+playing table,0,0,38,38,1
+shopping bag,21,1,9,31,0
+pushing,18,6,7,31,0
+crossing,14,8,5,27,0
+shopping cart,18,7,1,26,0
+moving,8,3,8,19,0
+face,15,2,2,19,0
+leaning,8,1,6,15,0
+talking,8,3,3,14,0
+drink,9,1,3,13,0
+eating,10,1,0,11,0
+waiting,5,0,3,8,0
+running,7,0,0,7,0
+browsing,5,1,0,6,0
+play,2,1,2,5,0
+shop,3,1,1,5,0
+drinking,1,0,2,3,0
+browse,1,2,0,3,0

@@ -1,0 +1,17 @@
+Optical flow magnitude summary
+max_videos_per_split: 220
+frame_stride: 3
+max_frame_pairs_per_video: 80
+resize_width: 320
+
+[train] videos_used=220
+  ego: n=17600, mean=2.0265, std=1.8712, p50=1.6482, p90=4.0553, p95=5.5434, max=18.0693
+  exo: n=17600, mean=1.4947, std=1.2754, p50=1.4327, p90=3.1401, p95=3.7971, max=19.1375
+
+[test_seen] videos_used=220
+  ego: n=17600, mean=1.8565, std=1.7390, p50=1.4642, p90=3.7890, p95=5.0026, max=15.0849
+  exo: n=17600, mean=1.4836, std=1.2778, p50=1.3649, p90=3.1893, p95=3.8926, max=9.8401
+
+[test_unseen] videos_used=220
+  ego: n=17600, mean=1.7819, std=1.4491, p50=1.4268, p90=3.6145, p95=4.8093, max=10.9019
+  exo: n=17600, mean=1.2244, std=0.9625, p50=0.9811, p90=2.5578, p95=3.1041, max=6.6799

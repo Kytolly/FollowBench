@@ -1,0 +1,63 @@
+<svg width="1800" height="780" viewBox="0 0 1800 780" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#F5FBFF"/>
+      <stop offset="100%" stop-color="#F7F2FF"/>
+    </linearGradient>
+    <linearGradient id="flowGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#78C6FF"/>
+      <stop offset="55%" stop-color="#8BA5FF"/>
+      <stop offset="100%" stop-color="#C59CFF"/>
+    </linearGradient>
+    <filter id="softShadow" x="-25%" y="-25%" width="150%" height="150%">
+      <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#243B63" flood-opacity="0.18"/>
+    </filter>
+  </defs>
+
+  <rect width="1800" height="780" rx="54" fill="url(#bgGrad)"/>
+
+  <!-- Left: abstract eye + FOV cone (ego) -->
+  <g transform="translate(150,170)" filter="url(#softShadow)">
+    <ellipse cx="180" cy="210" rx="150" ry="92" fill="#FFFFFF" stroke="#5B7DB8" stroke-width="14"/>
+    <circle cx="180" cy="210" r="58" fill="#E8F3FF" stroke="#355D9B" stroke-width="10"/>
+    <circle cx="180" cy="210" r="24" fill="#355D9B"/>
+    <path d="M292 170 L540 95 L540 325 L292 250 Z" fill="#BFE4FF" fill-opacity="0.62" stroke="#74BFFF" stroke-width="7"/>
+    <path d="M302 210 L560 210" stroke="#74BFFF" stroke-width="6" stroke-linecap="round"/>
+  </g>
+
+  <!-- Middle: dynamic timeline + arrow -->
+  <g transform="translate(560,0)">
+    <path d="M0 388 C150 300, 360 300, 510 388 C660 474, 870 474, 1020 388" fill="none" stroke="url(#flowGrad)" stroke-width="28" stroke-linecap="round"/>
+    <path d="M990 343 L1105 388 L990 433 Z" fill="#B392FF"/>
+    <circle cx="170" cy="336" r="10" fill="#78C6FF"/>
+    <circle cx="430" cy="450" r="10" fill="#8BA5FF"/>
+    <circle cx="690" cy="336" r="10" fill="#A294FF"/>
+  </g>
+
+  <!-- Right: person silhouette + exo framing -->
+  <g transform="translate(1260,120)" filter="url(#softShadow)">
+    <!-- Exo frame -->
+    <rect x="120" y="18" width="350" height="300" rx="22" fill="#FFFFFF" stroke="#7D8CCF" stroke-width="12"/>
+    <rect x="156" y="54" width="278" height="228" rx="14" fill="#EFF4FF" stroke="#A5B6E7" stroke-width="6"/>
+    <circle cx="440" cy="46" r="10" fill="#7D8CCF"/>
+
+    <!-- Person silhouette -->
+    <circle cx="292" cy="420" r="60" fill="#405F96"/>
+    <path d="M205 560 C215 485, 245 454, 292 454 C339 454, 369 485, 379 560 L379 620 L205 620 Z" fill="#405F96"/>
+    <rect x="248" y="620" width="36" height="88" rx="14" fill="#405F96"/>
+    <rect x="300" y="620" width="36" height="88" rx="14" fill="#405F96"/>
+
+    <!-- Small floating camera icon -->
+    <g transform="translate(70,360)">
+      <rect x="0" y="0" width="88" height="56" rx="10" fill="#FFFFFF" stroke="#7D8CCF" stroke-width="6"/>
+      <circle cx="44" cy="28" r="14" fill="#DCE8FF" stroke="#5A76B7" stroke-width="4"/>
+      <rect x="66" y="-14" width="22" height="16" rx="4" fill="#7D8CCF"/>
+    </g>
+  </g>
+
+  <!-- Wordmark -->
+  <g transform="translate(120,670)">
+    <text x="0" y="0" font-family="Comic Neue, Segoe UI, Arial, sans-serif" font-size="74" font-weight="700" fill="#29406B">FollowBench</text>
+    <text x="0" y="44" font-family="Comic Neue, Segoe UI, Arial, sans-serif" font-size="30" font-weight="600" fill="#5F74A3">From Ego Vision to Exo Understanding</text>
+  </g>
+</svg>

@@ -1,0 +1,72 @@
+scene_stacked_bar_stats
+num_terms: 65
+unseen_only_terms: 0
+sum_train: 23059
+sum_test_seen: 5258
+sum_test_unseen: 4326
+
+   1. road: train=2321, test_seen=508, test_unseen=144, total=2973
+   2. paved: train=1502, test_seen=326, test_unseen=130, total=1958
+   3. street: train=1030, test_seen=227, test_unseen=251, total=1508
+   4. walkway: train=1016, test_seen=245, test_unseen=237, total=1498
+   5. sidewalk: train=980, test_seen=197, test_unseen=155, total=1332
+   6. floor: train=636, test_seen=143, test_unseen=367, total=1146
+   7. green: train=739, test_seen=170, test_unseen=213, total=1122
+   8. room: train=833, test_seen=183, test_unseen=52, total=1068
+   9. indoor: train=466, test_seen=107, test_unseen=490, total=1063
+  10. sky: train=834, test_seen=188, test_unseen=29, total=1051
+  11. building: train=774, test_seen=159, test_unseen=114, total=1047
+  12. kitchen: train=801, test_seen=225, test_unseen=15, total=1041
+  13. tiled: train=668, test_seen=174, test_unseen=118, total=960
+  14. outdoor: train=619, test_seen=148, test_unseen=136, total=903
+  15. urban: train=586, test_seen=133, test_unseen=129, total=848
+  16. park: train=637, test_seen=145, test_unseen=11, total=793
+  17. desk: train=625, test_seen=139, test_unseen=1, total=765
+  18. table: train=348, test_seen=99, test_unseen=312, total=759
+  19. window: train=507, test_seen=138, test_unseen=20, total=665
+  20. mall: train=303, test_seen=68, test_unseen=288, total=659
+  21. traffic: train=460, test_seen=113, test_unseen=76, total=649
+  22. wall: train=431, test_seen=99, test_unseen=91, total=621
+  23. overcast: train=486, test_seen=92, test_unseen=6, total=584
+  24. grassy: train=467, test_seen=103, test_unseen=5, total=575
+  25. counter: train=350, test_seen=93, test_unseen=52, total=495
+  26. bunk: train=407, test_seen=84, test_unseen=0, total=491
+  27. hallway: train=274, test_seen=54, test_unseen=69, total=397
+  28. store: train=264, test_seen=50, test_unseen=66, total=380
+  29. bus: train=301, test_seen=62, test_unseen=12, total=375
+  30. grass: train=298, test_seen=60, test_unseen=6, total=364
+  31. bed: train=287, test_seen=61, test_unseen=1, total=349
+  32. commercial: train=185, test_seen=49, test_unseen=114, total=348
+  33. parking: train=221, test_seen=42, test_unseen=10, total=273
+  34. station: train=112, test_seen=29, test_unseen=131, total=272
+  35. car: train=195, test_seen=53, test_unseen=7, total=255
+  36. lane: train=183, test_seen=33, test_unseen=5, total=221
+  37. office: train=155, test_seen=37, test_unseen=20, total=212
+  38. vegetation: train=178, test_seen=31, test_unseen=3, total=212
+  39. plaza: train=150, test_seen=45, test_unseen=16, total=211
+  40. daytime: train=102, test_seen=19, test_unseen=22, total=143
+  41. crosswalk: train=93, test_seen=22, test_unseen=23, total=138
+  42. public: train=74, test_seen=15, test_unseen=47, total=136
+  43. shop: train=65, test_seen=23, test_unseen=45, total=133
+  44. restaurant: train=72, test_seen=15, test_unseen=42, total=129
+  45. lot: train=98, test_seen=20, test_unseen=9, total=127
+  46. platform: train=46, test_seen=7, test_unseen=73, total=126
+  47. elevated: train=80, test_seen=18, test_unseen=22, total=120
+  48. supermarket: train=80, test_seen=29, test_unseen=2, total=111
+  49. residential: train=75, test_seen=22, test_unseen=10, total=107
+  50. nighttime: train=68, test_seen=14, test_unseen=11, total=93
+  51. bridge: train=63, test_seen=18, test_unseen=9, total=90
+  52. aisle: train=73, test_seen=15, test_unseen=2, total=90
+  53. corridor: train=52, test_seen=11, test_unseen=25, total=88
+  54. intersection: train=56, test_seen=19, test_unseen=11, total=86
+  55. campus: train=61, test_seen=16, test_unseen=6, total=83
+  56. lobby: train=62, test_seen=7, test_unseen=3, total=72
+  57. highway: train=41, test_seen=12, test_unseen=3, total=56
+  58. cafe: train=15, test_seen=5, test_unseen=32, total=52
+  59. market: train=30, test_seen=5, test_unseen=16, total=51
+  60. cabinet: train=35, test_seen=5, test_unseen=2, total=42
+  61. hedge: train=29, test_seen=7, test_unseen=1, total=37
+  62. checkout: train=18, test_seen=11, test_unseen=0, total=29
+  63. tree: train=16, test_seen=7, test_unseen=4, total=27
+  64. shelf: train=20, test_seen=3, test_unseen=3, total=26
+  65. playground: train=6, test_seen=1, test_unseen=1, total=8

@@ -218,3 +218,9 @@ configs/config.yml
 third-party/
 models/
 .vscode/
+
+# Datasets (managed on HuggingFace)
+train/
+test_seen/
+test_unseen/
+combined_annotations.json

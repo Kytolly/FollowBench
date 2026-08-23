@@ -1,0 +1,26 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="badge_bg" cx="50%" cy="35%" r="70%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#EAF3FF"/>
+    </radialGradient>
+    <linearGradient id="badge_grad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#7CC7FF"/>
+      <stop offset="100%" stop-color="#B59BFF"/>
+    </linearGradient>
+  </defs>
+
+  <circle cx="512" cy="512" r="470" fill="url(#badge_bg)" stroke="url(#badge_grad)" stroke-width="24"/>
+  <circle cx="512" cy="512" r="330" fill="none" stroke="#A8D8FF" stroke-width="18"/>
+  <circle cx="512" cy="512" r="238" fill="none" stroke="#8D6BDD" stroke-opacity="0.24" stroke-width="10"/>
+
+  <circle cx="512" cy="462" r="108" fill="#F0F7FF" stroke="#3D6FA8" stroke-width="12"/>
+  <circle cx="512" cy="462" r="46" fill="#3D6FA8"/>
+
+  <path d="M296 620 C372 716, 504 768, 638 724 C730 694, 804 620, 832 530" fill="none" stroke="#8D6BDD" stroke-width="20" stroke-linecap="round"/>
+  <circle cx="296" cy="620" r="16" fill="#7CC7FF"/>
+  <circle cx="832" cy="530" r="18" fill="#8D6BDD"/>
+  <path d="M816 500 L872 532 L818 566 Z" fill="#8D6BDD"/>
+
+  <text x="512" y="860" text-anchor="middle" font-family="Comic Neue, Segoe UI, Arial, sans-serif" font-size="92" font-weight="700" fill="#2A3F66">FollowBench</text>
+</svg>

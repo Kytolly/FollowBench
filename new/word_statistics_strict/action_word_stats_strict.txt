@@ -1,0 +1,49 @@
+action_strict
+unique_items: 45
+total_occurrences: 8552
+
+    1. walking: 2693
+    2. standing: 1386
+    3. facing: 1296
+    4. sitting: 807
+    5. looking: 537
+    6. holding: 467
+    7. riding: 316
+    8. carrying: 315
+    9. playing: 151
+   10. pulling: 106
+   11. shopping: 61
+   12. using: 60
+   13. working: 60
+   14. playing table: 38
+   15. shopping bag: 31
+   16. pushing: 31
+   17. crossing: 27
+   18. shopping cart: 26
+   19. face: 19
+   20. moving: 19
+   21. leaning: 15
+   22. talking: 14
+   23. drink: 13
+   24. eating: 11
+   25. waiting: 8
+   26. running: 7
+   27. browsing: 6
+   28. play: 5
+   29. shop: 5
+   30. browse: 3
+   31. drinking: 3
+   32. pull: 2
+   33. holding his phone: 2
+   34. use: 1
+   35. move: 1
+   36. checking: 1
+   37. holding her phone: 1
+   38. carrying another bag: 1
+   39. shop window: 1
+   40. leaving: 1
+   41. work: 1
+   42. cross: 1
+   43. facing chair: 1
+   44. lean: 1
+   45. queue: 1

@@ -1,0 +1,69 @@
+appearance_stacked_bar_stats
+num_terms: 62
+unseen_only_terms: 1
+sum_train: 29901
+sum_test_seen: 6997
+sum_test_unseen: 6282
+
+   1. black: train=3434, test_seen=787, test_unseen=906, total=5127
+   2. dark: train=3280, test_seen=801, test_unseen=604, total=4685
+   3. pants: train=2918, test_seen=671, test_unseen=730, total=4319
+   4. hair: train=2521, test_seen=603, test_unseen=375, total=3499
+   5. jacket: train=2118, test_seen=512, test_unseen=645, total=3275
+   6. white: train=1658, test_seen=388, test_unseen=304, total=2350
+   7. blue: train=1054, test_seen=254, test_unseen=355, total=1663
+   8. purple: train=1214, test_seen=313, test_unseen=45, total=1572
+   9. shirt: train=976, test_seen=211, test_unseen=227, total=1414
+  10. grey: train=790, test_seen=155, test_unseen=158, total=1103
+  11. pack: train=641, test_seen=123, test_unseen=160, total=924
+  12. fanny: train=613, test_seen=120, test_unseen=156, total=889
+  13. hooded: train=554, test_seen=142, test_unseen=84, total=780
+  14. waist: train=522, test_seen=115, test_unseen=125, total=762
+  15. ponytail: train=502, test_seen=112, test_unseen=95, total=709
+  16. streaks: train=535, test_seen=144, test_unseen=6, total=685
+  17. hoodie: train=488, test_seen=110, test_unseen=51, total=649
+  18. jeans: train=412, test_seen=99, test_unseen=40, total=551
+  19. green: train=342, test_seen=81, test_unseen=94, total=517
+  20. tied: train=385, test_seen=76, test_unseen=54, total=515
+  21. sweater: train=386, test_seen=88, test_unseen=15, total=489
+  22. light: train=347, test_seen=73, test_unseen=60, total=480
+  23. harness: train=346, test_seen=76, test_unseen=43, total=465
+  24. brown: train=309, test_seen=84, test_unseen=51, total=444
+  25. beige: train=339, test_seen=76, test_unseen=29, total=444
+  26. denim: train=331, test_seen=90, test_unseen=13, total=434
+  27. bag: train=296, test_seen=72, test_unseen=48, total=416
+  28. long: train=229, test_seen=70, test_unseen=93, total=392
+  29. glasses: train=161, test_seen=34, test_unseen=107, total=302
+  30. top: train=205, test_seen=67, test_unseen=23, total=295
+  31. dyed: train=219, test_seen=48, test_unseen=8, total=275
+  32. patterned: train=214, test_seen=45, test_unseen=12, total=271
+  33. pink: train=210, test_seen=50, test_unseen=4, total=264
+  34. backpack: train=129, test_seen=27, test_unseen=86, total=242
+  35. red: train=88, test_seen=19, test_unseen=134, total=241
+  36. hat: train=190, test_seen=39, test_unseen=7, total=236
+  37. skirt: train=169, test_seen=38, test_unseen=0, total=207
+  38. shorts: train=144, test_seen=35, test_unseen=18, total=197
+  39. short: train=125, test_seen=26, test_unseen=27, total=178
+  40. shoes: train=104, test_seen=20, test_unseen=35, total=159
+  41. sneakers: train=67, test_seen=19, test_unseen=15, total=101
+  42. plaid: train=4, test_seen=0, test_unseen=95, total=99
+  43. orange: train=66, test_seen=19, test_unseen=3, total=88
+  44. fluffy: train=53, test_seen=16, test_unseen=0, total=69
+  45. coat: train=26, test_seen=6, test_unseen=30, total=62
+  46. vest: train=43, test_seen=13, test_unseen=5, total=61
+  47. yellow: train=27, test_seen=3, test_unseen=26, total=56
+  48. scarf: train=3, test_seen=0, test_unseen=39, total=42
+  49. cap: train=20, test_seen=5, test_unseen=11, total=36
+  50. leggings: train=16, test_seen=9, test_unseen=4, total=29
+  51. mask: train=12, test_seen=1, test_unseen=3, total=16
+  52. curly: train=13, test_seen=2, test_unseen=0, total=15
+  53. helmet: train=11, test_seen=2, test_unseen=1, total=14
+  54. colored: train=5, test_seen=2, test_unseen=6, total=13
+  55. boots: train=4, test_seen=2, test_unseen=6, total=12
+  56. striped: train=7, test_seen=0, test_unseen=4, total=11
+  57. bun: train=10, test_seen=0, test_unseen=1, total=11
+  58. dress: train=6, test_seen=3, test_unseen=1, total=10
+  59. braid: train=5, test_seen=0, test_unseen=3, total=8
+  60. streak: train=4, test_seen=1, test_unseen=0, total=5
+  61. braids: train=1, test_seen=0, test_unseen=1, total=2
+  62. straight: train=0, test_seen=0, test_unseen=1, total=1

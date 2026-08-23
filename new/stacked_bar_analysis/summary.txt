@@ -1,0 +1,22 @@
+Stacked bar analysis summary
+
+[scene]
+categories=65
+unseen_only_categories=0
+train_total=23059
+test_seen_total=5258
+test_unseen_total=4326
+
+[action]
+categories=31
+unseen_only_categories=1
+train_total=5955
+test_seen_total=1385
+test_unseen_total=1194
+
+[appearance]
+categories=62
+unseen_only_categories=1
+train_total=29901
+test_seen_total=6997
+test_unseen_total=6282

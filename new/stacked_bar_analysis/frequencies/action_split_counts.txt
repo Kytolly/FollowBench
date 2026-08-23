@@ -1,0 +1,38 @@
+action_stacked_bar_stats
+num_terms: 31
+unseen_only_terms: 1
+sum_train: 5955
+sum_test_seen: 1385
+sum_test_unseen: 1194
+
+   1. walking: train=1958, test_seen=414, test_unseen=321, total=2693
+   2. standing: train=936, test_seen=256, test_unseen=194, total=1386
+   3. facing: train=929, test_seen=232, test_unseen=134, total=1295
+   4. sitting: train=653, test_seen=142, test_unseen=12, total=807
+   5. looking: train=321, test_seen=95, test_unseen=120, total=536
+   6. holding: train=298, test_seen=53, test_unseen=116, total=467
+   7. riding: train=236, test_seen=58, test_unseen=22, total=316
+   8. carrying: train=214, test_seen=45, test_unseen=56, total=315
+   9. playing: train=47, test_seen=9, test_unseen=95, total=151
+  10. pulling: train=73, test_seen=14, test_unseen=19, total=106
+  11. shopping: train=43, test_seen=8, test_unseen=10, total=61
+  12. working: train=46, test_seen=11, test_unseen=3, total=60
+  13. using: train=48, test_seen=10, test_unseen=2, total=60
+  14. playing table: train=0, test_seen=0, test_unseen=38, total=38
+  15. shopping bag: train=21, test_seen=1, test_unseen=9, total=31
+  16. pushing: train=18, test_seen=6, test_unseen=7, total=31
+  17. crossing: train=14, test_seen=8, test_unseen=5, total=27
+  18. shopping cart: train=18, test_seen=7, test_unseen=1, total=26
+  19. moving: train=8, test_seen=3, test_unseen=8, total=19
+  20. face: train=15, test_seen=2, test_unseen=2, total=19
+  21. leaning: train=8, test_seen=1, test_unseen=6, total=15
+  22. talking: train=8, test_seen=3, test_unseen=3, total=14
+  23. drink: train=9, test_seen=1, test_unseen=3, total=13
+  24. eating: train=10, test_seen=1, test_unseen=0, total=11
+  25. waiting: train=5, test_seen=0, test_unseen=3, total=8
+  26. running: train=7, test_seen=0, test_unseen=0, total=7
+  27. browsing: train=5, test_seen=1, test_unseen=0, total=6
+  28. play: train=2, test_seen=1, test_unseen=2, total=5
+  29. shop: train=3, test_seen=1, test_unseen=1, total=5
+  30. drinking: train=1, test_seen=0, test_unseen=2, total=3
+  31. browse: train=1, test_seen=2, test_unseen=0, total=3
