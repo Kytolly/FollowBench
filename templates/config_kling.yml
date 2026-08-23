@@ -1,0 +1,24 @@
+repo_id: "Kytolly/FollowBench"
+device: "cuda"
+assets:
+  path: "assets/"
+output:
+  path: "output_kling/"
+rules:
+  clip_len: 49
+  fps: 60
+  height: 360
+  width: 640
+submission:
+  source_path: "data/output_kling/test_unseen"
+  json_path: "templates/submission_kling.json"
+meta:
+  team_name: "Kytolly"
+  model_name: "Kling AI"
+  split: "test_unseen"
+  contact: "kytolly.xqy@gmail.com"
+metrics:
+  - 'MeanSquaredError'
+  - 'StructuralSimilarityIndexMeasure'
+  - 'LearnedPerceptualImagePatchSimilarity'
+  - 'PeakSignaltoNoiseRatio'

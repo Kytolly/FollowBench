@@ -16,35 +16,20 @@ logger = logging.getLogger(__name__)
 
 import torch
 from torchvision.transforms.functional import to_pil_image
-from typing import Any, Dict, Optional, Union, Iterator
+from typing import Any, Dict, Optional, Union
 
 from ..utils import gpu
-from ..utils.video_kit import extract_i3d_features
-from .metric import FrechetVideoDistance
-from ..dataflow.set import BenchmarkDataset
 from ..dataflow.submission import Submission
 
 DIMENSION_NAMES = [
-    'FrechetVideoDistance', 'SourceControlConditionRecall',
-    'AestheticQuality', 'ImagingQuality', 
-    'TemporalFlickering', 'MotionSmoothness', 'DynamicDegree', 
-    'CameraCenteringError', 'AppearanceConsistency', 'ViewpointValidity', 
-    # 'BackgroundSemanticConsistency', 
-    'HumanActionAlignment', 
-    'OpticalFlowCorrelation', 'TrajectoryAlignment',
-    'SideBySideDepthConsistency', 'StructuralFidelity', 
-    'SubjectCameraDistanceError'
+    'MeanSquaredError',
+    'StructuralSimilarityIndexMeasure',
+    'LearnedPerceptualImagePatchSimilarity',
+    'PeakSignaltoNoiseRatio'
 ]
 
 DIMENSION_NAMES_IN_SHORT = [
-    'fvd', 'sccr',
-    'aq', 'iq',
-    'tf', 'ms', 'dd',
-    'cce', 'ac', 'vv',
-    # 'bsc', 
-    'haa',
-    'ofc', 'ta',
-    'ssdc', 'sf', 'scde'
+    'mse', 'ssim', 'lpips', 'psnr'
 ]
 DIMENSION_MODULE_MAP = dict(zip(DIMENSION_NAMES, DIMENSION_NAMES_IN_SHORT))
 SHORT_TO_FULL_MAP = {v: k for k, v in DIMENSION_MODULE_MAP.items()}

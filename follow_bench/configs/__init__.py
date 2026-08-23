@@ -36,7 +36,7 @@ class ModelsConfig:
     
 @dataclass
 class RulesConfig:
-    clip_len: int = 300
+    num_frames: int = 149
     fps: int = 60
     height: int = 704
     width: int = 1280
@@ -58,7 +58,8 @@ class AssetsConfig:
 @dataclass
 class OutputConfig:
     path: str = "output/"
-    
+
+@dataclass
 class MetaConfig:
     team_name: str = "A team name",
     model_name: str = "A model name",

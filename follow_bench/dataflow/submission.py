@@ -3,17 +3,18 @@
 This module provides the :class:`Submission` class which loads a submission JSON
 and offers helpers for validation and loading generated videos into memory.
 """
-
+import os
+import torch
+import decord
+import numpy as np
+import torch.nn.functional as F
 import json
 from pathlib import Path
 from typing import Union, Optional, Dict, Any
 import logging
 logger = logging.getLogger(__name__)
 
-from ..utils.video_kit import (
-    load_video_to_device,
-    validate_video_properties
-)
+from .option import Options
 REQUIRED_META_KEYS = set([
     'team_name', 
     'model_name', 
@@ -46,6 +47,7 @@ class Submission:
 
     def __init__(
         self,
+        opt: Options, 
         submission_path: Union[str, Path],
         source_path: Union[str, Path],
         device: str = 'cpu'
@@ -57,6 +59,7 @@ class Submission:
             source_path: Root directory containing generated videos (relative paths in JSON).
             device: Device to load tensors onto (e.g., 'cpu' or 'cuda').
         """
+        self.opt = opt
         self.device = device
         self.source_path = Path(source_path)
         self.submission_path = Path(submission_path)
@@ -151,12 +154,9 @@ class Submission:
         if video_id not in self.mapping:
             return None
         rel_path = self.mapping[video_id]["generated video"]
-        full_path = self.source_path / rel_path
-        try:
-            return load_video_to_device(str(full_path), device=self.device)
-        except Exception as e:
-            logger.error(f"Failed to load video {full_path}: {e}")
-            return None
+        full_path = str(self.source_path / rel_path)
+        
+        return self._load_video(full_path)
 
     def __getitem__(self, item: str) -> Optional[Any]:
         """Get generated video tensor by video ID.
@@ -178,3 +178,20 @@ class Submission:
             Number of video cases in the mapping
         """
         return len(self.mapping)
+
+    def _load_video(self, path: str) -> "torch.Tensor":
+        """
+        高内存效率的视频读取器：按需抽帧 + 极速降采样
+        """
+        vr = decord.VideoReader(path, ctx=decord.cpu(0))
+        
+        total_frames = len(vr)
+        target_frames = self.opt.num_frames
+        target_h = self.opt.height
+        target_w = self.opt.width
+        indices = np.linspace(0, total_frames - 1, target_frames).round().astype(np.int64)
+        frames = vr.get_batch(indices).asnumpy()
+        tensor = torch.from_numpy(frames).permute(0, 3, 1, 2).float() / 255.0
+        if tensor.shape[2] != target_h or tensor.shape[3] != target_w:
+            tensor = F.interpolate(tensor, size=(target_h, target_w), mode='bilinear', align_corners=False)
+        return tensor

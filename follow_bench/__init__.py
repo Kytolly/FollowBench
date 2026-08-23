@@ -27,6 +27,7 @@ logger = logging.getLogger()
 
 import torch
 from torchvision.transforms.functional import to_pil_image
+import torch.nn.functional as F
 
 from .configs import BaseEnvConfig        
 from .dataflow.submission import Submission
@@ -56,10 +57,14 @@ class Bench:
             device: Computing device to use ('cuda' or 'cpu')
             assets_root: Path to the assets directory containing test data
         """
+        self.cfg = cfg
         self.device = cfg.device
         self.assets_root = Path(cfg.assets.path)
         from .dimension import BenchRouter
         self.router = BenchRouter(self.device)
+        
+        from .dataflow.option import Options
+        self.opt = Options(assets=cfg.assets.path, height=cfg.rules.height, width=cfg.rules.width, phase=cfg.meta.split)
 
     def run(self, cfg: BaseEnvConfig, submission: Submission):
         """Execute the benchmark evaluation pipeline.
@@ -80,9 +85,7 @@ class Bench:
         # 1. Prepare DataLoader
         try:
             from .dataflow.loader import BenchmarkDataLoader
-            from .dataflow.option import Options
-            opt = Options(assets=cfg.assets.path, height=cfg.rules.height, width=cfg.rules.width, phase=cfg.meta.split)
-            loader_wrapper = BenchmarkDataLoader(opt)
+            loader_wrapper = BenchmarkDataLoader(self.opt)
             dataloader = loader_wrapper.dataloader
         except Exception as e:
             logger.error(f"Failed to create DataLoader: {e}")
@@ -110,25 +113,23 @@ class Bench:
         
         # Clear router cache before starting
         self.router.global_cache.clear()
-
+        valid_case_ids = set(submission.mapping.keys())
+        logger.info(f"Starting Evaluation. Only {len(valid_case_ids)} cases from submission will be evaluated.")
         for batch in tqdm(dataloader, desc="Evaluating"):
-            # Move data to device
-            ego_videos = batch.get('ego_video')
-            gt_videos = batch.get('exo_video')
-            ref_images = batch.get('ref_image')
-            
-            if ego_videos is not None: ego_videos = ego_videos.to(self.device)
-            if gt_videos is not None: gt_videos = gt_videos.to(self.device)
-            
             ids = batch['video_id']
-
             for i, vid_id in enumerate(ids):
-                # Retrieve Generated Video
                 gen_video = submission.get_generated_video(vid_id)
                 if gen_video is None:
                     logger.warning(f"Missing generation for {vid_id}, skipping.")
                     continue
                 
+                # Move data to device
+                ego_videos = batch.get('ego_video')
+                gt_videos = batch.get('exo_video')
+                ref_images = batch.get('ref_image')
+                
+                if ego_videos is not None: ego_videos = ego_videos.to(self.device)
+                if gt_videos is not None: gt_videos = gt_videos.to(self.device)
                 tensor_gen = gen_video.to(self.device)
                 tensor_gt = gt_videos[i] if gt_videos is not None else None
                 tensor_ego = ego_videos[i] if ego_videos is not None else None
@@ -143,6 +144,7 @@ class Bench:
 
                 # Shared Context for this video
                 # global_cache is shared across metrics for this video to reuse detections/flows
+                tensor_gen, tensor_gt = self._preprocess_video_pair(tensor_gen, tensor_gt)
                 compute_kwargs = {
                     'tensor_gen': tensor_gen,
                     'tensor_gt': tensor_gt,
@@ -202,3 +204,49 @@ class Bench:
         recorder.save_report()
         self.router.global_cache.clear()
         logger.info(f"Evaluation complete. Results saved to {output_dir}")
+        
+    def _align_video_tensor(self, tensor: torch.Tensor, target_frames: int, target_h: int, target_w: int) -> torch.Tensor:
+        """
+        对单段视频张量进行时空强制对齐。
+        假设输入 tensor 形状为: [T, C, H, W]
+        """
+        T_in, C, H_in, W_in = tensor.shape
+
+        # ==========================================
+        # 1. 时间轴对齐: 均匀抽帧 / 插值补帧
+        # ==========================================
+        if T_in != target_frames:
+            # torch.linspace 生成从 0 到 T_in-1 的 target_frames 个均匀点
+            # .round().long() 将这些点映射到最近的真实帧索引
+            # 效果:
+            # - 如果 T_in > target_frames: 均匀跳帧抽样
+            # - 如果 T_in < target_frames: 均匀复制某些帧以补齐 (完美防残影)
+            indices = torch.linspace(0, T_in - 1, steps=target_frames).round().long()
+            tensor = tensor[indices]
+
+        # ==========================================
+        # 2. 空间轴对齐: 分辨率缩放
+        # ==========================================
+        if H_in != target_h or W_in != target_w:
+            # 此时 tensor 形状为 [target_frames, C, H_in, W_in]
+            # F.interpolate 期望输入 [N, C, H, W]，刚好把 target_frames 作为 N 传入
+            tensor = F.interpolate(
+                tensor, 
+                size=(target_h, target_w), 
+                mode='bilinear', 
+                align_corners=False
+            )
+
+        return tensor
+    
+    def _preprocess_video_pair(self, tensor_gen: torch.Tensor, tensor_gt: torch.Tensor):
+        """
+        在吐出 Batch 前，统一处理生成视频和原视频
+        """
+        target_frames = self.cfg.rules.num_frames 
+        target_h = self.cfg.rules.height
+        target_w = self.cfg.rules.width 
+        tensor_gen = self._align_video_tensor(tensor_gen, target_frames, target_h, target_w)
+        tensor_gt = self._align_video_tensor(tensor_gt, target_frames, target_h, target_w)
+
+        return tensor_gen, tensor_gt

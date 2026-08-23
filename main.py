@@ -14,13 +14,14 @@ sys.path.append(str(current_dir))
 from follow_bench.cli.core import cli
 
 
-def main() -> None:
+def main():
     """Main entry point for the CLI application."""
     cli()
 
 
 if __name__ == '__main__':
     '''
-    python main.py evaluate
+    python main.py --config follow_bench/configs/config.yml --device cuda evaluate
+    python main.py --config follow_bench/configs/config.yml --device cuda --list
     '''
     main()

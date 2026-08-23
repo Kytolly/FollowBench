@@ -4,10 +4,10 @@ from pathlib import Path
 
 # ================= 配置区域 =================
 # 您的真实数据根目录
-ASSETS_ROOT = r"assets/kling/test_unseen"
+ASSETS_ROOT = r"data/output_WorldWander/test_unseen_WorldWander"
 
 # 输出文件路径 (根据您之前的上下文，放在 cache/gen 下)
-OUTPUT_FILE = r"templates/submission_kling.json"
+OUTPUT_FILE = r"templates/submission_worldwander_unseen.json"
 
 # 元数据配置
 META_INFO = {

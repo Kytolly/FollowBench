@@ -1,0 +1,24 @@
+repo_id: "Kytolly/FollowBench"
+device: "cuda"
+assets:
+  path: "assets/"
+output:
+  path: "output_vace_seen/"
+rules:
+  clip_len: 49
+  fps: 60
+  height: 704
+  width: 1280
+submission:
+  source_path: "data/output_vace/test_seen_vace"
+  json_path: "templates/submission_vace_seen.json"
+meta:
+  team_name: "Kytolly"
+  model_name: "Wan VACE"
+  split: "test_seen"
+  contact: "kytolly.xqy@gmail.com"
+metrics:
+  - 'MeanSquaredError'
+  - 'StructuralSimilarityIndexMeasure'
+  - 'LearnedPerceptualImagePatchSimilarity'
+  - 'PeakSignaltoNoiseRatio'

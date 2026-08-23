@@ -10,25 +10,24 @@ class LearnedPerceptualImagePatchSimilarityEvaluator(DimensionEvaluator):
     高度契合人类主观视觉感受，衡量语义和质感差异。↓ 越低越好。
     """
     def prepare(self):
-        # 默认使用 VGG 网络，这是 LPIPS 的标准配置
-        # 预训练权重将在第一次运行时自动下载
+        self.eval_size = (256, 256)
+        self.batch_size = 8
         self.loss_fn = lpips.LPIPS(net='vgg').to(self.device)
 
-    def compute(self, tensor_gen: torch.Tensor, **kwargs: Any):
-        tensor_gt = kwargs.get('tensor_exo')
-        if tensor_gt is None:
-            raise ValueError("LPIPSEvaluator requires ground truth 'tensor_exo'.")
-
-        if tensor_gen.shape != tensor_gt.shape:
-            tensor_gen = F.interpolate(tensor_gen, size=tensor_gt.shape[2:], mode='bilinear')
-
-        # LPIPS 库期望输入范围是 [-1, 1]
-        gen_scaled = tensor_gen * 2.0 - 1.0
-        gt_scaled = tensor_gt * 2.0 - 1.0
+    def compute(self, tensor_gen: torch.Tensor, **kwargs) -> float:
+        tensor_gt = kwargs.get('tensor_gt')
+        num_frames = tensor_gen.shape[0]
+        total_score = 0.0
 
         with torch.no_grad():
-            # 逐帧计算 LPIPS，然后求平均代表整个视频的感知误差
-            # 输入: (T, C, H, W)
-            loss = self.loss_fn(gen_scaled, gt_scaled).mean()
-            
-        return loss.item()
+            for i in range(0, num_frames, self.batch_size):
+                gen_batch = tensor_gen[i : i + self.batch_size].to(self.device)
+                gt_batch = tensor_gt[i : i + self.batch_size].to(self.device)
+                gen_batch = F.interpolate(gen_batch, size=self.eval_size, mode='bilinear', align_corners=False)
+                gt_batch = F.interpolate(gt_batch, size=self.eval_size, mode='bilinear', align_corners=False)
+                
+                gen_batch = gen_batch * 2.0 - 1.0
+                gt_batch = gt_batch * 2.0 - 1.0
+                score = self.loss_fn(gen_batch, gt_batch).mean()
+                total_score += score.item() * gen_batch.shape[0]
+        return total_score / num_frames

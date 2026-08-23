@@ -5,6 +5,7 @@ Provides :class:`BenchmarkDataLoader` for use in training/evaluation loops.
 
 import torch
 from typing import Iterator, Dict, Any
+import torch.nn.functional as F
 
 from .set import BenchmarkDataset
 from .option import Options
@@ -51,7 +52,9 @@ class BenchmarkDataLoader:
             Number of samples in the underlying dataset
         """
         return len(self.dataset)
-
+    
+    
+    
     def __iter__(self) -> Iterator[Dict[str, Any]]:
         """Iterate over the data loader yielding batches.
         

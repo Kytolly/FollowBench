@@ -11,14 +11,14 @@ import cv2
 import numpy as np
 import logging
 from typing import Dict, Any
-
 from torch.utils.data import Dataset
 from torchvision import transforms
 from PIL import Image
 from huggingface_hub import snapshot_download
+import decord
+import torch.nn.functional as F
 
 from .option import Options
-from ..utils.video_kit import load_video_to_device
 
 class BenchmarkDataset(Dataset):
     def __init__(self, opt: Options) -> None:
@@ -96,20 +96,24 @@ class BenchmarkDataset(Dataset):
             return torch.zeros(3, self.opt.height, self.opt.width)
     
     def _load_video(self, rel_path: str) -> "torch.Tensor":
-        """Load a video and return a tensor.
-
-        Args:
-            rel_path: Relative path to the video inside data root.
-
-        Returns:
-            Video tensor of shape [T, C, H, W].
+        """
+        高内存效率的视频读取器：按需抽帧 + 极速降采样
         """
         path = os.path.join(self.data_root, rel_path)
-        try:
-            return load_video_to_device(path, device='cpu') 
-        except Exception as e:
-            logging.error(f"Failed to load video {path}: {e}")
-            return torch.zeros(self.opt.clip_len, 3, self.opt.height, self.opt.width)
+        vr = decord.VideoReader(path, ctx=decord.cpu(0))
+        
+        total_frames = len(vr)
+        target_frames = self.opt.num_frames
+        target_h = self.opt.height
+        target_w = self.opt.width
+        indices = np.linspace(0, total_frames - 1, target_frames).round().astype(np.int64)
+        frames = vr.get_batch(indices).asnumpy()
+        tensor = torch.from_numpy(frames).permute(0, 3, 1, 2).float() / 255.0
+        if tensor.shape[2] != target_h or tensor.shape[3] != target_w:
+            tensor = F.interpolate(tensor, size=(target_h, target_w), mode='bilinear', align_corners=False)
+        return tensor
+        
+    
 
     def __len__(self) -> int:
         return len(self.ids)
@@ -129,6 +133,7 @@ class BenchmarkDataset(Dataset):
         ego_video = self._load_video(data['ego video path'])
         exo_video = self._load_video(data['exo video path']) # GT
         ref_img = self._load_image(data['reference image path'])
+        # 
         
         return {
             'video_id': vid_id,

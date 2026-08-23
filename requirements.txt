@@ -1,0 +1,11 @@
+nvidia-ml-py
+torchmetrics
+lpips
+dotenv
+pyyaml
+opencv-python
+pyiqa
+pytorchvideo
+ultralytics
+decord
+piq

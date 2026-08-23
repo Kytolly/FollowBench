@@ -12,13 +12,8 @@ class MeanSquaredErrorEvaluator(DimensionEvaluator):
         pass
 
     def compute(self, tensor_gen: torch.Tensor, **kwargs: Any):
-        tensor_gt = kwargs.get('tensor_exo')
-        if tensor_gt is None:
-            raise ValueError("MSEEvaluator requires ground truth 'tensor_exo'.")
-        
+        tensor_gt = kwargs.get('tensor_gt')
         if tensor_gen.shape != tensor_gt.shape:
             tensor_gen = F.interpolate(tensor_gen, size=tensor_gt.shape[2:], mode='bilinear')
-            
-        # 计算 MSE (假定输入均已归一化到 [0, 1])
         mse_score = F.mse_loss(tensor_gen, tensor_gt).item()
         return mse_score

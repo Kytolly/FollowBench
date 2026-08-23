@@ -1,0 +1,24 @@
+repo_id: "Kytolly/FollowBench"
+device: "cuda"
+assets:
+  path: "assets/"
+output:
+  path: "output_seedance/"
+rules:
+  clip_len: 49
+  fps: 60
+  height: 704
+  width: 1280
+submission:
+  source_path: "data/output_seedance"
+  json_path: "templates/submission_seedance.json"
+meta:
+  team_name: "Kytolly"
+  model_name: "Seedance AI"
+  split: "test_unseen"
+  contact: "kytolly.xqy@gmail.com"
+metrics:
+  - 'MeanSquaredError'
+  - 'StructuralSimilarityIndexMeasure'
+  - 'LearnedPerceptualImagePatchSimilarity'
+  - 'PeakSignaltoNoiseRatio'

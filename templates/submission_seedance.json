@@ -1,0 +1,142 @@
+{
+    "meta": {
+        "team_name": "Kytolly",
+        "model_name": "Kling AI",
+        "mode": "test_unseen",
+        "contact": "email@example.com"
+    },
+    "results": {
+        "test_unseen_case_0000_seedance": {
+            "generated video": "test_unseen_case_0000_seedance.mp4"
+        },
+        "test_unseen_case_0020_seedance": {
+            "generated video": "test_unseen_case_0020_seedance.mp4"
+        },
+        "test_unseen_case_0040_seedance": {
+            "generated video": "test_unseen_case_0040_seedance.mp4"
+        },
+        "test_unseen_case_0060_seedance": {
+            "generated video": "test_unseen_case_0060_seedance.mp4"
+        },
+        "test_unseen_case_0100_seedance": {
+            "generated video": "test_unseen_case_0100_seedance.mp4"
+        },
+        "test_unseen_case_0120_seedance": {
+            "generated video": "test_unseen_case_0120_seedance.mp4"
+        },
+        "test_unseen_case_0140_seedance": {
+            "generated video": "test_unseen_case_0140_seedance.mp4"
+        },
+        "test_unseen_case_0160_seedance": {
+            "generated video": "test_unseen_case_0160_seedance.mp4"
+        },
+        "test_unseen_case_0180_seedance": {
+            "generated video": "test_unseen_case_0180_seedance.mp4"
+        },
+        "test_unseen_case_0200_seedance": {
+            "generated video": "test_unseen_case_0200_seedance.mp4"
+        },
+        "test_unseen_case_0220_seedance": {
+            "generated video": "test_unseen_case_0220_seedance.mp4"
+        },
+        "test_unseen_case_0240_seedance": {
+            "generated video": "test_unseen_case_0240_seedance.mp4"
+        },
+        "test_unseen_case_0260_seedance": {
+            "generated video": "test_unseen_case_0260_seedance.mp4"
+        },
+        "test_unseen_case_0280_seedance": {
+            "generated video": "test_unseen_case_0280_seedance.mp4"
+        },
+        "test_unseen_case_0300_seedance": {
+            "generated video": "test_unseen_case_0300_seedance.mp4"
+        },
+        "test_unseen_case_0320_seedance": {
+            "generated video": "test_unseen_case_0320_seedance.mp4"
+        },
+        "test_unseen_case_0340_seedance": {
+            "generated video": "test_unseen_case_0340_seedance.mp4"
+        },
+        "test_unseen_case_0360_seedance": {
+            "generated video": "test_unseen_case_0360_seedance.mp4"
+        },
+        "test_unseen_case_0380_seedance": {
+            "generated video": "test_unseen_case_0380_seedance.mp4"
+        },
+        "test_unseen_case_0400_seedance": {
+            "generated video": "test_unseen_case_0400_seedance.mp4"
+        },
+        "test_unseen_case_0420_seedance": {
+            "generated video": "test_unseen_case_0420_seedance.mp4"
+        },
+        "test_unseen_case_0440_seedance": {
+            "generated video": "test_unseen_case_0440_seedance.mp4"
+        },
+        "test_unseen_case_0480_seedance": {
+            "generated video": "test_unseen_case_0480_seedance.mp4"
+        },
+        "test_unseen_case_0500_seedance": {
+            "generated video": "test_unseen_case_0500_seedance.mp4"
+        },
+        "test_unseen_case_0520_seedance": {
+            "generated video": "test_unseen_case_0520_seedance.mp4"
+        },
+        "test_unseen_case_0540_seedance": {
+            "generated video": "test_unseen_case_0540_seedance.mp4"
+        },
+        "test_unseen_case_0560_seedance": {
+            "generated video": "test_unseen_case_0560_seedance.mp4"
+        },
+        "test_unseen_case_0580_seedance": {
+            "generated video": "test_unseen_case_0580_seedance.mp4"
+        },
+        "test_unseen_case_0600_seedance": {
+            "generated video": "test_unseen_case_0600_seedance.mp4"
+        },
+        "test_unseen_case_0620_seedance": {
+            "generated video": "test_unseen_case_0620_seedance.mp4"
+        },
+        "test_unseen_case_0640_seedance": {
+            "generated video": "test_unseen_case_0640_seedance.mp4"
+        },
+        "test_unseen_case_0680_seedance": {
+            "generated video": "test_unseen_case_0680_seedance.mp4"
+        },
+        "test_unseen_case_0720_seedance": {
+            "generated video": "test_unseen_case_0720_seedance.mp4"
+        },
+        "test_unseen_case_0760_seedance": {
+            "generated video": "test_unseen_case_0760_seedance.mp4"
+        },
+        "test_unseen_case_0780_seedance": {
+            "generated video": "test_unseen_case_0780_seedance.mp4"
+        },
+        "test_unseen_case_0800_seedance": {
+            "generated video": "test_unseen_case_0800_seedance.mp4"
+        },
+        "test_unseen_case_0820_seedance": {
+            "generated video": "test_unseen_case_0820_seedance.mp4"
+        },
+        "test_unseen_case_0840_seedance": {
+            "generated video": "test_unseen_case_0840_seedance.mp4"
+        },
+        "test_unseen_case_0860_seedance": {
+            "generated video": "test_unseen_case_0860_seedance.mp4"
+        },
+        "test_unseen_case_0880_seedance": {
+            "generated video": "test_unseen_case_0880_seedance.mp4"
+        },
+        "test_unseen_case_0900_seedance": {
+            "generated video": "test_unseen_case_0900_seedance.mp4"
+        },
+        "test_unseen_case_0920_seedance": {
+            "generated video": "test_unseen_case_0920_seedance.mp4"
+        },
+        "test_unseen_case_0940_seedance": {
+            "generated video": "test_unseen_case_0940_seedance.mp4"
+        },
+        "test_unseen_case_0980_seedance": {
+            "generated video": "test_unseen_case_0980_seedance.mp4"
+        }
+    }
+}

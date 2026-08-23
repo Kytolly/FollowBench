@@ -22,6 +22,7 @@ class Options:
     # 视频配置
     height:         int = 704
     width:          int  = 1280
+    num_frames:     int  = 149
         
     # Dataloader 配置
     batch_size:     int  = 1                                      

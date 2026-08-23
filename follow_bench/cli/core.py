@@ -50,16 +50,16 @@ def build_config_callback(ctx: Context, param, value):
 
 
 @click.group(invoke_without_command=True)
-@click.option('-c', '--config', default='follow_bench/configs/config.yml', type=click.Path(), help='Config file for benchmark running.')
-@click.option('--assets_path', default='assets/followbench', type=click.Path(), help='Assets root directory containing dataset.')
-@click.option('--output_path', default='./output', type=click.Path(), help='Output directory for evaluation results.')
-@click.option('--device', default='cuda', type=click.Choice(['cuda', 'cpu']), help='Device to run evaluation on.')
+@click.option('-c', '--config', type=click.Path(), help='Config file for benchmark running.')
+@click.option('--assets_path', type=click.Path(), help='Assets root directory containing dataset.')
+@click.option('--output_path', type=click.Path(), help='Output directory for evaluation results.')
+@click.option('--device', help='Device to run evaluation on.')
 @click.option('--submission_source', type=click.Path(), help='Path to submission source generated videos root directory.')
 @click.option('--submission_json', type=click.Path(), help='Path to submission.json file.')
 @click.option('--list', 'list_config', is_flag=True, default=False, help='List all configurations and exit.')
 @click.option('--metrics', multiple=True, help='You can use [--metrics mse] [--metrics ssim] etc.')
 @click.pass_context
-def cli(ctx: Context, config, assets_path, output_path, device, submission_source, submission_json, list_config, metrics) -> None:
+def cli(ctx: Context, config, assets_path, output_path, device, submission_source, submission_json, list_config, metrics):
     """Benchmark Command Line Tool.
     
     This tool provides commands for validating submissions 
@@ -74,7 +74,7 @@ def cli(ctx: Context, config, assets_path, output_path, device, submission_sourc
 
 @cli.command()
 @click.pass_context
-def evaluate(ctx: Context) -> None:
+def evaluate(ctx: Context):
     """Run full evaluation on a submission."""
     cfg: BaseEnvConfig = ctx.obj
     
@@ -85,14 +85,14 @@ def evaluate(ctx: Context) -> None:
     from .. import Bench 
     from ..dataflow.submission import Submission 
     bench = Bench(cfg)
-    sub = Submission(submission_path=cfg.submission.json_path, 
+    sub = Submission(bench.opt, submission_path=cfg.submission.json_path, 
                         source_path=cfg.submission.source_path)
     bench.run(cfg, submission=sub)
     click.echo(f"✅ Evaluation completed successfully! Results saved to {cfg.output.path}")
 
 @cli.command()
 @click.pass_context
-def validate(ctx: Context) -> None:
+def validate(ctx: Context):
     """Check if submission format is valid."""
     cfg: BaseEnvConfig = ctx.obj
     
